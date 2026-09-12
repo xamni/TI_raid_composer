@@ -8,6 +8,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import "./App.css";
+import { supabase } from "./supabase";
 
 const GROUPS = [1, 2, 3, 4, 5];
 
@@ -400,10 +401,7 @@ function DroppableRoster({ children }) {
   );
 }
 function App() {
-  const [members, setMembers] = useState(() => {
-    const saved = localStorage.getItem("wowRaidMembers");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [members, setMembers] = useState([]);
 
   const [raidSlots, setRaidSlots] = useState(() => {
     const saved = localStorage.getItem("wowRaidSlots");
@@ -411,6 +409,51 @@ function App() {
       ? JSON.parse(saved)
       : Array.from({ length: 25 }, () => null);
   });
+
+  useEffect(() => {
+  async function loadMembers() {
+    const { data, error } = await supabase
+      .from("members")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Erreur chargement roster :", error);
+      return;
+    }
+
+    const formattedMembers = data.map((member) => ({
+      id: member.id,
+      name: member.name,
+      className: member.class_name,
+      spec: member.spec,
+      role: member.role,
+    }));
+
+    setMembers(formattedMembers);
+  }
+
+  loadMembers();
+
+  const channel = supabase
+    .channel("members-changes")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "members",
+      },
+      () => {
+        loadMembers();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+  }, []);
 
   const [showAddMember, setShowAddMember] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -432,10 +475,6 @@ function App() {
   );
 
   useEffect(() => {
-    localStorage.setItem("wowRaidMembers", JSON.stringify(members));
-  }, [members]);
-
-  useEffect(() => {
     localStorage.setItem("wowRaidSlots", JSON.stringify(raidSlots));
   }, [raidSlots]);
 
@@ -453,45 +492,64 @@ function App() {
     });
   }, [members, raidMemberIds, search]);
 
-  function addMember(event) {
-    event.preventDefault();
+  async function addMember(event) {
+  event.preventDefault();
 
-    const cleanName = newMember.name.trim();
+  const cleanName = newMember.name.trim();
 
-    if (!cleanName) {
-      alert("Entre un nom pour le membre.");
-      return;
-    }
-
-    const alreadyExists = members.some(
-      (member) =>
-        member.name.toLowerCase() === cleanName.toLowerCase()
-    );
-
-    if (alreadyExists) {
-      alert("Ce membre existe déjà dans le roster.");
-      return;
-    }
-
-    const member = {
-      id: crypto.randomUUID(),
-      name: cleanName,
-      className: newMember.className,
-      spec: newMember.spec,
-      role: newMember.role,
-    };
-
-    setMembers((current) => [...current, member]);
-
-    setNewMember({
-      name: "",
-      className: "Warrior",
-      spec: "Protection",
-      role: "Tank",
-    });
-
-    setShowAddMember(false);
+  if (!cleanName) {
+    alert("Entre un nom pour le membre.");
+    return;
   }
+
+  const alreadyExists = members.some(
+    (member) =>
+      member.name.toLowerCase() === cleanName.toLowerCase()
+  );
+
+  if (alreadyExists) {
+    alert("Ce membre existe déjà dans le roster.");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("members")
+    .insert([
+      {
+        name: cleanName,
+        class_name: newMember.className,
+        spec: newMember.spec,
+        role: newMember.role,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Erreur ajout membre :", error);
+    alert("Impossible d'ajouter le membre.");
+    return;
+  }
+
+  const member = {
+    id: data.id,
+    name: data.name,
+    className: data.class_name,
+    spec: data.spec,
+    role: data.role,
+  };
+
+  setMembers((current) => [...current, member]);
+
+  setNewMember({
+    name: "",
+    className: "Warrior",
+    spec: "Protection",
+    role: "Tank",
+  });
+
+  setShowAddMember(false);
+}
 
   function chooseMember(memberId) {
     if (selectedSlot === null) return;
@@ -514,27 +572,37 @@ function App() {
     });
   }
 
-  function deleteMember(memberId) {
-    const member = members.find((item) => item.id === memberId);
-    if (!member) return;
+  async function deleteMember(memberId) {
+  const member = members.find((item) => item.id === memberId);
+  if (!member) return;
 
-    const confirmed = window.confirm(
-      `Supprimer ${member.name} du roster ?`
-    );
+  const confirmed = window.confirm(
+    `Supprimer ${member.name} du roster ?`
+  );
 
-    if (!confirmed) return;
+  if (!confirmed) return;
 
-    setMembers((current) =>
-      current.filter((item) => item.id !== memberId)
-    );
+  const { error } = await supabase
+    .from("members")
+    .delete()
+    .eq("id", memberId);
 
-    setRaidSlots((current) =>
-      current.map((slotMemberId) =>
-        slotMemberId === memberId ? null : slotMemberId
-      )
-    );
+  if (error) {
+    console.error("Erreur suppression membre :", error);
+    alert("Impossible de supprimer le membre.");
+    return;
   }
 
+  setMembers((current) =>
+    current.filter((item) => item.id !== memberId)
+  );
+
+  setRaidSlots((current) =>
+    current.map((slotMemberId) =>
+      slotMemberId === memberId ? null : slotMemberId
+    )
+  );
+  }
   function getMember(memberId) {
     return members.find((member) => member.id === memberId);
   }
