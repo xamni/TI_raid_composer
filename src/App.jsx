@@ -448,7 +448,9 @@ function App() {
         loadMembers();
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+  console.log("REALTIME STATUS:", status);
+});
 
   return () => {
     supabase.removeChannel(channel);
