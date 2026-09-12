@@ -400,6 +400,281 @@ function DroppableRoster({ children }) {
     </div>
   );
 }
+function DraggableBenchMember({
+  member,
+  getClassColor,
+  getSpecIcon,
+  removeFromBench,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDraggableRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: `bench-${member.id}`,
+    data: {
+      memberId: member.id,
+      source: "bench",
+    },
+  });
+
+  const {
+    setNodeRef: setDroppableRef,
+    isOver,
+  } = useDroppable({
+    id: `bench-target-${member.id}`,
+    data: {
+      targetType: "bench-member",
+      targetMemberId: member.id,
+    },
+  });
+
+  function setRefs(node) {
+    setDraggableRef(node);
+    setDroppableRef(node);
+  }
+
+  const style = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    opacity: isDragging ? 0.5 : 1,
+    borderLeft: `4px solid ${getClassColor(member.className)}`,
+  };
+
+  return (
+  <div
+    ref={setRefs}
+    style={style}
+    className={`bench-member ${
+      isOver ? "bench-member-over" : ""
+    }`}
+    {...listeners}
+    {...attributes}
+  >
+    {getSpecIcon(member) && (
+      <img
+        className="spec-icon"
+        src={getSpecIcon(member)}
+        alt={member.spec}
+      />
+    )}
+
+    <div className="bench-member-info">
+      <strong>{member.name}</strong>
+      <span>
+        {member.className} • {member.spec}
+      </span>
+    </div>
+
+    <button
+      className="remove-player"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        removeFromBench(member.id);
+      }}
+      title="Retirer du bench"
+    >
+      ×
+    </button>
+  </div>
+);
+}
+
+function DroppableBench({
+  benchMembers,
+  getMember,
+  getClassColor,
+  getSpecIcon,
+  removeFromBench,
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: "bench-zone",
+    data: {
+      targetType: "bench-zone",
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`bench-zone ${isOver ? "bench-zone-over" : ""}`}
+    >
+      {benchMembers.length === 0 ? (
+        <span className="bench-empty">
+          Glisser des joueurs ici
+        </span>
+      ) : (
+        <div className="bench-list">
+          {benchMembers.map((memberId) => {
+            const member = getMember(memberId);
+
+            if (!member) return null;
+
+            return (
+              <DraggableBenchMember
+                key={member.id}
+                member={member}
+                getClassColor={getClassColor}
+                getSpecIcon={getSpecIcon}
+                removeFromBench={removeFromBench}
+              />
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+function DraggableSwitchMember({
+  member,
+  switchId,
+  getClassColor,
+  getSpecIcon,
+  removeFromSwitch,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: `switch-${switchId}-${member.id}`,
+    data: {
+      memberId: member.id,
+      source: "switch",
+      switchId,
+    },
+  });
+
+  const style = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="switch-member"
+      {...listeners}
+      {...attributes}
+    >
+      <img
+        className="spec-icon"
+        src={getSpecIcon(member)}
+        alt={`${member.className} ${member.spec}`}
+      />
+
+      <div className="switch-member-info">
+        <strong
+          style={{
+            color: getClassColor(member.className),
+          }}
+        >
+          {member.name}
+        </strong>
+
+        <span>
+          {member.className} • {member.spec}
+        </span>
+
+        <small>{member.role}</small>
+      </div>
+
+      <button
+        className="remove-player"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          removeFromSwitch(switchId, member.id);
+        }}
+        title="Retirer du switch"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+function SwitchPanel({
+  switchData,
+  getMember,
+  getClassColor,
+  getSpecIcon,
+  updateSwitchBoss,
+  removeSwitch,
+  removeFromSwitch,
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `switch-zone-${switchData.id}`,
+    data: {
+      targetType: "switch-zone",
+      switchId: switchData.id,
+    },
+  });
+
+  return (
+    <div className="switch-panel">
+      <div className="switch-header">
+        <input
+          type="text"
+          value={switchData.bossName}
+          onChange={(event) =>
+            updateSwitchBoss(
+              switchData.id,
+              event.target.value
+            )
+          }
+          placeholder="Nom du boss..."
+        />
+
+        <button
+          className="switch-delete"
+          onClick={() => removeSwitch(switchData.id)}
+          title="Supprimer ce switch"
+        >
+          ×
+        </button>
+      </div>
+
+      <div
+        ref={setNodeRef}
+        className={`switch-members ${
+          isOver ? "switch-members-over" : ""
+        }`}
+      >
+        {(switchData.members || []).length === 0 ? (
+          <span className="switch-empty">
+            Glisser des joueurs ici
+          </span>
+        ) : (
+          (switchData.members || []).map((memberId) => {
+            const member = getMember(memberId);
+
+            if (!member) return null;
+
+            return (
+              <DraggableSwitchMember
+                key={member.id}
+                member={member}
+                switchId={switchData.id}
+                getClassColor={getClassColor}
+                getSpecIcon={getSpecIcon}
+                removeFromSwitch={removeFromSwitch}
+              />
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
 function App() {
   const [members, setMembers] = useState([]);
 
@@ -409,6 +684,27 @@ function App() {
       ? JSON.parse(saved)
       : Array.from({ length: 25 }, () => null);
   });
+
+  const [benchMembers, setBenchMembers] = useState(() => {
+  const saved = localStorage.getItem("wowRaidBench");
+  return saved ? JSON.parse(saved) : [];
+  });
+  const [switches, setSwitches] = useState(() => {
+  const saved = localStorage.getItem("wowRaidSwitches");
+  return saved ? JSON.parse(saved) : [];
+  });
+  useEffect(() => {
+  localStorage.setItem(
+    "wowRaidBench",
+    JSON.stringify(benchMembers)
+  );
+  }, [benchMembers]);
+  useEffect(() => {
+    localStorage.setItem(
+    "wowRaidSwitches",
+    JSON.stringify(switches)
+  );
+  }, [switches]);
 
   useEffect(() => {
   async function loadMembers() {
@@ -481,7 +777,9 @@ function App() {
   }, [raidSlots]);
 
   const raidMemberIds = raidSlots.filter(Boolean);
-  const raidCount = raidMemberIds.length;
+  const raidCount = raidSlots.filter(
+  (memberId) => memberId && getMember(memberId)
+  ).length;
 
   const availableMembers = useMemo(() => {
     return members.filter((member) => {
@@ -609,10 +907,62 @@ function App() {
     return members.find((member) => member.id === memberId);
   }
 
+  function addSwitch() {
+  if (switches.length >= 5) {
+    alert("Maximum 5 fenêtres Switch.");
+    return;
+  }
+
+  setSwitches((current) => [
+    ...current,
+    {
+      id: crypto.randomUUID(),
+      bossName: "",
+      members: [],
+    },
+  ]);
+}
+
+function removeSwitch(switchId) {
+  setSwitches((current) =>
+    current.filter((item) => item.id !== switchId)
+  );
+}
+function removeFromSwitch(switchId, memberId) {
+  setSwitches((current) =>
+    current.map((item) =>
+      item.id === switchId
+        ? {
+            ...item,
+            members: (item.members || []).filter(
+              (id) => id !== memberId
+            ),
+          }
+        : item
+    )
+  );
+}
+
+function updateSwitchBoss(switchId, bossName) {
+  setSwitches((current) =>
+    current.map((item) =>
+      item.id === switchId
+        ? { ...item, bossName }
+        : item
+    )
+  );
+}
+
   function getClassColor(className) {
     return (
       CLASSES.find((wowClass) => wowClass.name === className)?.color ||
       "#FFFFFF"
+    );
+  }
+
+  function removeFromBench(memberId) {
+    setBenchMembers((current) =>
+      current.filter((id) => id !== memberId)
     );
   }
 
@@ -647,19 +997,214 @@ function handleDragEnd(event) {
   const source = active.data.current?.source;
   const memberId = active.data.current?.memberId;
   const fromSlot = active.data.current?.slotIndex;
+  const sourceSwitchId = active.data.current?.switchId;
 
   const toSlot = over.data.current?.slotIndex;
   const targetType = over.data.current?.targetType;
   const targetMemberId = over.data.current?.targetMemberId;
+  const targetSwitchId = over.data.current?.switchId;
 
-  // -----------------------------------
-  // ROSTER -> RAID
-  // -----------------------------------
-  if (source === "roster" && typeof toSlot === "number") {
-    if (!memberId) return;
+  if (!memberId) return;
 
-    if (raidSlots.includes(memberId)) return;
+  // ===================================
+  // PETITE FONCTION :
+  // ajoute un joueur dans un Switch
+  // sans doublon
+  // ===================================
+  function addToSwitch(switchId, playerId) {
+    setSwitches((current) =>
+      current.map((item) => {
+        if (item.id !== switchId) return item;
 
+        const currentMembers = item.members || [];
+
+        if (currentMembers.includes(playerId)) {
+          return item;
+        }
+
+        return {
+          ...item,
+          members: [...currentMembers, playerId],
+        };
+      })
+    );
+  }
+
+  // ===================================
+  // ROSTER / RAID / BENCH -> SWITCH
+  //
+  // IMPORTANT :
+  // le joueur reste dans sa position actuelle.
+  // Le Switch est seulement informatif.
+  // ===================================
+  if (
+    (source === "roster" ||
+      source === "raid" ||
+      source === "bench") &&
+    targetType === "switch-zone" &&
+    targetSwitchId
+  ) {
+    addToSwitch(targetSwitchId, memberId);
+    return;
+  }
+
+  // ===================================
+  // SWITCH -> SWITCH
+  //
+  // Déplace le joueur d'une fenêtre
+  // Switch vers une autre.
+  // ===================================
+  if (
+    source === "switch" &&
+    targetType === "switch-zone" &&
+    sourceSwitchId &&
+    targetSwitchId
+  ) {
+    if (sourceSwitchId === targetSwitchId) return;
+
+    setSwitches((current) =>
+      current.map((item) => {
+        let members = item.members || [];
+
+        if (item.id === sourceSwitchId) {
+          members = members.filter(
+            (id) => id !== memberId
+          );
+        }
+
+        if (
+          item.id === targetSwitchId &&
+          !members.includes(memberId)
+        ) {
+          members = [...members, memberId];
+        }
+
+        return {
+          ...item,
+          members,
+        };
+      })
+    );
+
+    return;
+  }
+
+  // ===================================
+  // SWITCH -> ROSTER
+  //
+  // Retire uniquement le joueur du
+  // Switch.
+  //
+  // Ça ne modifie PAS sa vraie position
+  // Raid / Bench.
+  // ===================================
+  if (
+    source === "switch" &&
+    sourceSwitchId &&
+    (
+      targetType === "roster-zone" ||
+      targetType === "roster-member"
+    )
+  ) {
+    setSwitches((current) =>
+      current.map((item) =>
+        item.id === sourceSwitchId
+          ? {
+              ...item,
+              members: (item.members || []).filter(
+                (id) => id !== memberId
+              ),
+            }
+          : item
+      )
+    );
+
+    return;
+  }
+
+  // ===================================
+  // SWITCH -> RAID
+  //
+  // Applique réellement le joueur
+  // dans la compo.
+  //
+  // Le joueur RESTE aussi affiché dans
+  // son Switch.
+  // ===================================
+  if (
+    source === "switch" &&
+    typeof toSlot === "number"
+  ) {
+    const currentRaidSlot =
+      raidSlots.indexOf(memberId);
+
+    const isOnBench =
+      benchMembers.includes(memberId);
+
+    // -----------------------------------
+    // Le joueur est déjà dans le RAID
+    // -> échange de slots
+    // -----------------------------------
+    if (currentRaidSlot !== -1) {
+      if (currentRaidSlot === toSlot) return;
+
+      setRaidSlots((current) => {
+        const copy = [...current];
+
+        const targetPlayer = copy[toSlot];
+
+        copy[toSlot] = memberId;
+        copy[currentRaidSlot] = targetPlayer;
+
+        return copy;
+      });
+
+      return;
+    }
+
+    // -----------------------------------
+    // Le joueur est sur le BENCH
+    // -> échange Bench <-> Raid
+    // -----------------------------------
+    if (isOnBench) {
+      setRaidSlots((current) => {
+        const copy = [...current];
+
+        const replacedMember = copy[toSlot];
+
+        copy[toSlot] = memberId;
+
+        setBenchMembers((bench) => {
+          const withoutDragged = bench.filter(
+            (id) => id !== memberId
+          );
+
+          if (!replacedMember) {
+            return withoutDragged;
+          }
+
+          if (
+            withoutDragged.includes(replacedMember)
+          ) {
+            return withoutDragged;
+          }
+
+          return [
+            ...withoutDragged,
+            replacedMember,
+          ];
+        });
+
+        return copy;
+      });
+
+      return;
+    }
+
+    // -----------------------------------
+    // Le joueur n'est ni Raid ni Bench
+    // -> il entre simplement dans le Raid
+    // -----------------------------------
     setRaidSlots((current) => {
       const copy = [...current];
       copy[toSlot] = memberId;
@@ -669,10 +1214,325 @@ function handleDragEnd(event) {
     return;
   }
 
-  // -----------------------------------
+  // ===================================
+  // SWITCH -> BENCH
+  // ===================================
+  if (
+    source === "switch" &&
+    (
+      targetType === "bench-zone" ||
+      targetType === "bench-member"
+    )
+  ) {
+    const currentRaidSlot =
+      raidSlots.indexOf(memberId);
+
+    // -----------------------------------
+    // SWITCH -> joueur précis du Bench
+    // échange si possible
+    // -----------------------------------
+    if (
+      targetType === "bench-member" &&
+      targetMemberId &&
+      targetMemberId !== memberId
+    ) {
+      setBenchMembers((current) =>
+        current.map((id) =>
+          id === targetMemberId
+            ? memberId
+            : id
+        )
+      );
+
+      // Si le joueur Switch était dans le Raid,
+      // le joueur Bench prend sa place.
+      if (currentRaidSlot !== -1) {
+        setRaidSlots((current) => {
+          const copy = [...current];
+          copy[currentRaidSlot] =
+            targetMemberId;
+          return copy;
+        });
+      }
+
+      return;
+    }
+
+    // -----------------------------------
+    // SWITCH -> zone Bench
+    // -----------------------------------
+    if (currentRaidSlot !== -1) {
+      setRaidSlots((current) => {
+        const copy = [...current];
+        copy[currentRaidSlot] = null;
+        return copy;
+      });
+    }
+
+    setBenchMembers((current) => {
+      if (current.includes(memberId)) {
+        return current;
+      }
+
+      return [...current, memberId];
+    });
+
+    return;
+  }
+
+  // ===================================
+  // ROSTER -> MEMBRE DU BENCH
+  // échange Roster <-> Bench
+  // ===================================
+  if (
+    source === "roster" &&
+    targetType === "bench-member" &&
+    targetMemberId
+  ) {
+    if (raidSlots.includes(memberId)) return;
+    if (benchMembers.includes(memberId)) return;
+
+    setBenchMembers((current) =>
+      current.map((id) =>
+        id === targetMemberId
+          ? memberId
+          : id
+      )
+    );
+
+    return;
+  }
+
+  // ===================================
+  // ROSTER -> BENCH
+  // ===================================
+  if (
+    source === "roster" &&
+    targetType === "bench-zone"
+  ) {
+    if (benchMembers.includes(memberId)) return;
+    if (raidSlots.includes(memberId)) return;
+
+    setBenchMembers((current) => [
+      ...current,
+      memberId,
+    ]);
+
+    return;
+  }
+
+  // ===================================
+  // RAID -> MEMBRE DU BENCH
+  // échange Raid <-> Bench
+  // ===================================
+  if (
+    source === "raid" &&
+    typeof fromSlot === "number" &&
+    targetType === "bench-member" &&
+    targetMemberId
+  ) {
+    setRaidSlots((current) => {
+      const copy = [...current];
+
+      const raidMemberId = copy[fromSlot];
+
+      copy[fromSlot] = targetMemberId;
+
+      setBenchMembers((bench) =>
+        bench.map((id) =>
+          id === targetMemberId
+            ? raidMemberId
+            : id
+        )
+      );
+
+      return copy;
+    });
+
+    return;
+  }
+
+  // ===================================
+  // RAID -> BENCH
+  // ===================================
+  if (
+    source === "raid" &&
+    typeof fromSlot === "number" &&
+    targetType === "bench-zone"
+  ) {
+    setRaidSlots((current) => {
+      const copy = [...current];
+      copy[fromSlot] = null;
+      return copy;
+    });
+
+    setBenchMembers((current) => {
+      if (current.includes(memberId)) {
+        return current;
+      }
+
+      return [...current, memberId];
+    });
+
+    return;
+  }
+
+  // ===================================
+  // BENCH -> MEMBRE DU BENCH
+  // échange de position dans le Bench
+  // ===================================
+  if (
+    source === "bench" &&
+    targetType === "bench-member" &&
+    targetMemberId &&
+    targetMemberId !== memberId
+  ) {
+    setBenchMembers((current) => {
+      const copy = [...current];
+
+      const fromIndex =
+        copy.indexOf(memberId);
+
+      const toIndex =
+        copy.indexOf(targetMemberId);
+
+      if (
+        fromIndex === -1 ||
+        toIndex === -1
+      ) {
+        return current;
+      }
+
+      copy[fromIndex] = targetMemberId;
+      copy[toIndex] = memberId;
+
+      return copy;
+    });
+
+    return;
+  }
+
+  // ===================================
+  // BENCH -> RAID
+  // ===================================
+  if (
+    source === "bench" &&
+    typeof toSlot === "number"
+  ) {
+    setRaidSlots((current) => {
+      const copy = [...current];
+
+      const replacedMember = copy[toSlot];
+
+      copy[toSlot] = memberId;
+
+      if (
+        replacedMember &&
+        replacedMember !== memberId
+      ) {
+        setBenchMembers((bench) => {
+          const withoutDragged =
+            bench.filter(
+              (id) => id !== memberId
+            );
+
+          if (
+            withoutDragged.includes(
+              replacedMember
+            )
+          ) {
+            return withoutDragged;
+          }
+
+          return [
+            ...withoutDragged,
+            replacedMember,
+          ];
+        });
+      } else {
+        setBenchMembers((bench) =>
+          bench.filter(
+            (id) => id !== memberId
+          )
+        );
+      }
+
+      return copy;
+    });
+
+    return;
+  }
+
+  // ===================================
+  // BENCH -> MEMBRE DU ROSTER
+  // échange Bench <-> Roster
+  // ===================================
+  if (
+    source === "bench" &&
+    targetType === "roster-member" &&
+    targetMemberId
+  ) {
+    if (raidSlots.includes(targetMemberId)) {
+      return;
+    }
+
+    if (benchMembers.includes(targetMemberId)) {
+      return;
+    }
+
+    setBenchMembers((current) =>
+      current.map((id) =>
+        id === memberId
+          ? targetMemberId
+          : id
+      )
+    );
+
+    return;
+  }
+
+  // ===================================
+  // BENCH -> ZONE ROSTER
+  // sort le joueur du Bench
+  // ===================================
+  if (
+    source === "bench" &&
+    targetType === "roster-zone"
+  ) {
+    setBenchMembers((current) =>
+      current.filter(
+        (id) => id !== memberId
+      )
+    );
+
+    return;
+  }
+
+  // ===================================
+  // ROSTER -> RAID
+  // ===================================
+  if (
+    source === "roster" &&
+    typeof toSlot === "number"
+  ) {
+    if (raidSlots.includes(memberId)) return;
+    if (benchMembers.includes(memberId)) return;
+
+    setRaidSlots((current) => {
+      const copy = [...current];
+
+      copy[toSlot] = memberId;
+
+      return copy;
+    });
+
+    return;
+  }
+
+  // ===================================
   // RAID -> RAID
   // échange de slots
-  // -----------------------------------
+  // ===================================
   if (
     source === "raid" &&
     typeof fromSlot === "number" &&
@@ -682,8 +1542,11 @@ function handleDragEnd(event) {
     setRaidSlots((current) => {
       const copy = [...current];
 
-      const draggedMember = copy[fromSlot];
-      const targetMember = copy[toSlot];
+      const draggedMember =
+        copy[fromSlot];
+
+      const targetMember =
+        copy[toSlot];
 
       copy[toSlot] = draggedMember;
       copy[fromSlot] = targetMember;
@@ -694,10 +1557,10 @@ function handleDragEnd(event) {
     return;
   }
 
-  // -----------------------------------
+  // ===================================
   // RAID -> ZONE ROSTER
-  // sort le joueur du raid
-  // -----------------------------------
+  // sort du Raid
+  // ===================================
   if (
     source === "raid" &&
     typeof fromSlot === "number" &&
@@ -712,18 +1575,27 @@ function handleDragEnd(event) {
     return;
   }
 
-  // -----------------------------------
+  // ===================================
   // RAID -> MEMBRE DU ROSTER
-  // échange joueur raid <-> joueur roster
-  // -----------------------------------
+  // échange Raid <-> Roster
+  // ===================================
   if (
     source === "raid" &&
     typeof fromSlot === "number" &&
     targetType === "roster-member" &&
     targetMemberId
   ) {
-    // ne rien faire si le membre cible est déjà dans le raid
-    if (raidSlots.includes(targetMemberId)) return;
+    if (
+      raidSlots.includes(targetMemberId)
+    ) {
+      return;
+    }
+
+    if (
+      benchMembers.includes(targetMemberId)
+    ) {
+      return;
+    }
 
     setRaidSlots((current) => {
       const copy = [...current];
@@ -794,7 +1666,10 @@ function handleDragEnd(event) {
                 member={member}
                 getClassColor={getClassColor}
                 getSpecIcon={getSpecIcon}
-                inRaid={inRaid}
+                inRaid={
+                  raidSlots.includes(member.id) ||
+                  benchMembers.includes(member.id)
+                }
                 deleteMember={deleteMember}
               />
             );
@@ -812,7 +1687,9 @@ function handleDragEnd(event) {
                 groupStart + 5
               );
 
-              const groupCount = groupSlots.filter(Boolean).length;
+              const groupCount = groupSlots.filter(
+                (memberId) => memberId && getMember(memberId)
+                ).length;
 
               return (
                 <div className="raid-group" key={groupNumber}>
@@ -867,6 +1744,48 @@ function handleDragEnd(event) {
                 </div>
               );
             })}
+            
+       <div className="bench-panel">
+  <div className="bench-header">
+    <span>Bench</span>
+  </div>
+
+  <DroppableBench
+    benchMembers={benchMembers}
+    getMember={getMember}
+    getClassColor={getClassColor}
+    getSpecIcon={getSpecIcon}
+    removeFromBench={removeFromBench}
+  />
+</div>
+
+            <div className="switches-section">
+              <div className="switches-title">
+                <span>Switch</span>
+
+                {switches.length < 5 && (
+                  <button onClick={addSwitch}>
+                    + Ajouter un switch
+                  </button>
+                )}
+              </div>
+
+              <div className="switches-grid">
+                {switches.map((switchData) => (
+                  <SwitchPanel
+                    key={switchData.id}
+                    switchData={switchData}
+                    getMember={getMember}
+                    getClassColor={getClassColor}
+                    getSpecIcon={getSpecIcon}
+                    updateSwitchBoss={updateSwitchBoss}
+                    removeSwitch={removeSwitch}
+                    removeFromSwitch={removeFromSwitch}
+                  />
+                ))}
+              </div>
+            </div>
+
           </section>
         </main>
 
