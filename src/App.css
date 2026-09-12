@@ -764,3 +764,22 @@ input {
   border-color: #d6b66f;
   background: #1d180f;
 }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.guild-logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+.app-footer {
+  padding: 18px 20px 22px;
+  text-align: center;
+  color: #756b5b;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+}

@@ -803,10 +803,10 @@ function App() {
   }
 
   const alreadyExists = members.some(
-    (member) =>
-      member.name.toLowerCase() === cleanName.toLowerCase()
-  );
-
+  (member) =>
+    member.name.toLowerCase() === cleanName.toLowerCase() &&
+    member.spec === newMember.spec
+);
   if (alreadyExists) {
     alert("Ce membre existe déjà dans le roster.");
     return;
@@ -1612,13 +1612,21 @@ function handleDragEnd(event) {
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="app">
         <header className="topbar">
-          <div>
-            <h1>Raid Composer</h1>
-            <p>World of Warcraft 2.4.3</p>
-          </div>
+  <div className="brand">
+    <img
+      className="guild-logo"
+      src="/TI_LOGO-modified.png"
+      alt="Totale Impro"
+    />
 
-          <div className="raid-count">{raidCount} / 25</div>
-        </header>
+    <div>
+      <h1>Totale Impro — Raid Composer</h1>
+      <p>The Burning Crusade • 2.4.3</p>
+    </div>
+  </div>
+
+  <div className="raid-count">{raidCount} / 25</div>
+</header>
 
         <main className="layout">
           <aside className="roster-panel">
@@ -1788,6 +1796,9 @@ function handleDragEnd(event) {
 
           </section>
         </main>
+        <footer className="app-footer">
+  Crafted for Totale Impro by Xamni • 2026
+</footer>
 
         {showAddMember && (
           <div
