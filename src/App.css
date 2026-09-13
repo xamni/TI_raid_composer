@@ -815,3 +815,172 @@ input {
   font-size: 11px;
   letter-spacing: 0.4px;
 }
+.main-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 20px 0;
+  border-bottom: 1px solid #403725;
+  background: #0c0b09;
+  box-sizing: border-box;
+}
+
+.main-tabs button {
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #958a76;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.main-tabs button:hover {
+  color: #d6b66f;
+}
+
+.main-tabs button.active {
+  color: #d6b66f;
+  border-bottom-color: #d6b66f;
+}
+.roster-page {
+  padding: 20px;
+}
+
+.roster-management {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+  border: 1px solid #66512d;
+  border-radius: 4px;
+  background: #14110c;
+}
+
+.roster-management .search {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 14px 0;
+}
+
+.roster-management-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.roster-management-member {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 6px 8px;
+  border: 1px solid #403725;
+  border-radius: 3px;
+  background: #181512;
+}
+
+.roster-management-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.roster-management-info strong {
+  font-size: 14px;
+}
+
+.roster-management-info span,
+.roster-management-info small {
+  color: #958a76;
+  font-size: 11px;
+}
+
+.delete-player {
+  border: 1px solid #55372e;
+  border-radius: 3px;
+  background: #1b100e;
+  color: #b98270;
+  cursor: pointer;
+}
+.class-selector-panel {
+  align-self: start;
+  padding: 12px;
+  border: 1px solid #66512d;
+  border-radius: 4px;
+  background: #14110c;
+}
+
+.class-selector-title {
+  margin-bottom: 12px;
+}
+
+.class-selector-title h2 {
+  margin: 0;
+  color: #d6b66f;
+  font-size: 18px;
+}
+
+.class-selector-title span {
+  color: #756b5b;
+  font-size: 11px;
+}
+
+.class-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.class-buttons button {
+  padding: 7px 8px;
+  border: 1px solid #403725;
+  border-left: 4px solid #403725;
+  border-radius: 3px;
+  background: #0c0b09;
+  color: #958a76;
+  text-align: left;
+  cursor: pointer;
+}
+
+.class-buttons button:hover {
+  background: #181512;
+  color: #d6b66f;
+}
+
+.class-buttons button.active {
+  background: #211c12;
+  color: #d6b66f;
+  border-top-color: #66512d;
+  border-right-color: #66512d;
+  border-bottom-color: #66512d;
+}
+
+.class-members {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.empty-class {
+  padding: 16px 8px;
+  text-align: center;
+  color: #756b5b;
+  font-size: 12px;
+}
+.edit-player {
+  border: 1px solid #4f4938;
+  border-radius: 3px;
+  background: #171510;
+  color: #d6b66f;
+  cursor: pointer;
+  padding: 5px 8px;
+  font-size: 14px;
+}
+
+.edit-player:hover {
+  background: #272117;
+}

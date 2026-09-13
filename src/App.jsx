@@ -255,6 +255,7 @@ function DraggableRosterMember({
   getSpecIcon,
   inRaid,
   deleteMember,
+  showDelete = true,
 }) {
   const {
     attributes,
@@ -328,17 +329,19 @@ function DraggableRosterMember({
         <small>{member.role}</small>
       </div>
 
-      <button
-        className="delete-member"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.stopPropagation();
-          deleteMember(member.id);
-        }}
-        title="Supprimer le membre"
-      >
-        ×
-      </button>
+            {showDelete && (
+        <button
+          className="remove-player"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            deleteMember(member.id);
+          }}
+          title="Supprimer le membre"
+        >
+          ×
+        </button>
+      )}
     </div>
   );
 }
@@ -679,6 +682,20 @@ function SwitchPanel({
 function App() {
   const [members, setMembers] = useState([]);
 
+  const [editingMember, setEditingMember] = useState(null);
+
+const [editMember, setEditMember] = useState({
+  name: "",
+  className: "Warrior",
+  spec: SPECS["Warrior"][0],
+  role: ROLES[0],
+  mainId: "",
+});
+
+  const [selectedClass, setSelectedClass] = useState("Warrior");
+
+  const [activeView, setActiveView] = useState("composition");
+
   const [raidSlots, setRaidSlots] = useState(() => {
     const saved = localStorage.getItem("wowRaidSlots");
     return saved
@@ -725,6 +742,7 @@ function App() {
       className: member.class_name,
       spec: member.spec,
       role: member.role,
+      mainId: member.main_id,
     }));
 
     setMembers(formattedMembers);
@@ -763,6 +781,7 @@ function App() {
     className: "Warrior",
     spec: "Protection",
     role: "Tank",
+    mainId: "",
   });
 
   const sensors = useSensors(
@@ -817,11 +836,14 @@ function App() {
     .from("members")
     .insert([
       {
-        name: cleanName,
-        class_name: newMember.className,
-        spec: newMember.spec,
-        role: newMember.role,
-      },
+  name: cleanName,
+  class_name: newMember.className,
+  spec: newMember.spec,
+  role: newMember.role,
+  main_id: newMember.mainId
+    ? Number(newMember.mainId)
+    : null,
+}
     ])
     .select()
     .single();
@@ -847,11 +869,64 @@ function App() {
     className: "Warrior",
     spec: "Protection",
     role: "Tank",
+    mainId: "",
   });
 
   setShowAddMember(false);
 }
+function openEditMember(member) {
+  setEditingMember(member.id);
 
+  setEditMember({
+  name: member.name,
+  className: member.className,
+  spec: member.spec,
+  role: member.role,
+  mainId: member.mainId || "",
+});
+}
+
+function handleEditClassChange(className) {
+  setEditMember((current) => ({
+    ...current,
+    className,
+    spec: SPECS[className][0],
+  }));
+}
+
+async function saveEditedMember(event) {
+  event.preventDefault();
+
+  if (!editingMember) return;
+
+  const cleanName = editMember.name.trim();
+
+  if (!cleanName) {
+    alert("Le nom du personnage est obligatoire.");
+    return;
+  }
+
+  const { error } = await supabase
+  .from("members")
+  .update({
+    name: cleanName,
+    class_name: editMember.className,
+    spec: editMember.spec,
+    role: editMember.role,
+    main_id: editMember.mainId
+      ? Number(editMember.mainId)
+      : null,
+  })
+  .eq("id", editingMember);
+
+  if (error) {
+    console.error(error);
+    alert("Erreur pendant la modification du membre.");
+    return;
+  }
+
+  setEditingMember(null);
+}
   function chooseMember(memberId) {
     if (selectedSlot === null) return;
 
@@ -1628,66 +1703,78 @@ function handleDragEnd(event) {
 
   <div className="raid-count">{raidCount} / 25</div>
 </header>
+    <nav className="main-tabs">
+      <button
+    className={activeView === "composition" ? "active" : ""}
+    onClick={() => setActiveView("composition")}
+  >
+    Composition
+  </button>
 
-        <main className="layout">
-          <aside className="roster-panel">
+  <button
+    className={activeView === "roster" ? "active" : ""}
+    onClick={() => setActiveView("roster")}
+  >
+    Roster
+  </button>
+</nav>
+
+    {activeView === "composition" && (
+      <main className="layout composition-layout">
+        <aside className="class-selector-panel">
   <DroppableRoster>
-    <div className="panel-title">
-      <div>
-        <h2>Roster Guilde</h2>
-        <span className="roster-count">
-          {members.length} membre
-          {members.length > 1 ? "s" : ""}
-        </span>
-      </div>
-
-      <button onClick={() => setShowAddMember(true)}>
-        + Ajouter
-      </button>
+    <div className="class-selector-title">
+      <h2>Joueurs</h2>
+      <span>Choisir par classe</span>
     </div>
 
-    <input
-      className="search"
-      type="text"
-      placeholder="Rechercher un membre..."
-      value={search}
-      onChange={(event) => setSearch(event.target.value)}
-    />
+    <div className="class-buttons">
+      {CLASSES.map((wowClass) => (
+        <button
+          key={wowClass.name}
+          className={
+            selectedClass === wowClass.name ? "active" : ""
+          }
+          style={{
+            borderLeftColor: getClassColor(wowClass.name),
+          }}
+          onClick={() => setSelectedClass(wowClass.name)}
+        >
+          {wowClass.name}
+        </button>
+      ))}
+    </div>
 
-    <div className="roster-list">
-      {members.length === 0 ? (
-        <div className="empty-roster">
-          Aucun membre pour l'instant.
+    <div className="class-members">
+      {members
+        .filter(
+          (member) => member.className === selectedClass
+        )
+        .map((member) => (
+          <DraggableRosterMember
+            key={member.id}
+            member={member}
+            getClassColor={getClassColor}
+            getSpecIcon={getSpecIcon}
+            inRaid={
+              raidSlots.includes(member.id) ||
+              benchMembers.includes(member.id)
+            }
+            showDelete={false}
+          />
+        ))}
+
+      {members.filter(
+        (member) => member.className === selectedClass
+      ).length === 0 && (
+        <div className="empty-class">
+          Aucun joueur de cette classe.
         </div>
-      ) : (
-        members
-          .filter((member) =>
-            member.name
-              .toLowerCase()
-              .includes(search.toLowerCase())
-          )
-          .map((member) => {
-            const inRaid = raidMemberIds.includes(member.id);
-
-            return (
-              <DraggableRosterMember
-                key={member.id}
-                member={member}
-                getClassColor={getClassColor}
-                getSpecIcon={getSpecIcon}
-                inRaid={
-                  raidSlots.includes(member.id) ||
-                  benchMembers.includes(member.id)
-                }
-                deleteMember={deleteMember}
-              />
-            );
-          })
       )}
     </div>
   </DroppableRoster>
 </aside>
-
+          
           <section className="raid-panel">
             {GROUPS.map((groupNumber) => {
               const groupStart = (groupNumber - 1) * 5;
@@ -1797,10 +1884,246 @@ function handleDragEnd(event) {
 
           </section>
         </main>
+        )}
+        {activeView === "roster" && (
+  <main className="roster-page">
+    <section className="roster-management">
+      <div className="panel-title">
+        <div>
+          <h2>Roster Guilde</h2>
+
+          <span className="roster-count">
+            {members.length} membre
+            {members.length > 1 ? "s" : ""}
+          </span>
+        </div>
+
+        <button onClick={() => setShowAddMember(true)}>
+          + Ajouter un membre
+        </button>
+      </div>
+
+      <input
+        className="search"
+        type="text"
+        placeholder="Rechercher un membre..."
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
+
+      <div className="roster-management-list">
+        {members.length === 0 ? (
+          <div className="empty-roster">
+            Aucun membre pour l'instant.
+          </div>
+        ) : (
+          members
+            .filter((member) =>
+              member.name
+                .toLowerCase()
+                .includes(search.toLowerCase())
+            )
+            .map((member) => (
+              <div
+                className="roster-management-member"
+                key={member.id}
+              >
+                <img
+                  className="spec-icon"
+                  src={getSpecIcon(member)}
+                  alt={member.spec}
+                />
+
+                <div className="roster-management-info">
+                  <strong
+                    style={{
+                      color: getClassColor(member.className),
+                    }}
+                  >
+                    {member.name}
+                  </strong>
+
+                  <span>
+                    {member.className} • {member.spec}
+                  </span>
+
+                  <small>{member.role}</small>
+                </div>
+<button
+  className="edit-player"
+  onClick={() => openEditMember(member)}
+  title="Modifier le membre"
+>
+  ✎
+</button>
+                <button
+                  className="delete-player"
+                  onClick={() => deleteMember(member.id)}
+                  title="Supprimer le membre"
+                >
+                  ×
+                </button>
+              </div>
+            ))
+        )}
+      </div>
+    </section>
+  </main>
+)}
         <footer className="app-footer">
   Crafted for Totale Impro by Xamni • 2026
 </footer>
+{editingMember && (
+  <div
+    className="modal-overlay"
+    onMouseDown={() => setEditingMember(null)}
+  >
+    <div
+      className="modal"
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <div className="modal-header">
+        <div>
+          <h2>Modifier un membre</h2>
+          <p>
+            Modifie les informations du personnage.
+          </p>
+        </div>
 
+        <button
+          className="modal-close"
+          onClick={() => setEditingMember(null)}
+        >
+          ×
+        </button>
+      </div>
+
+      <form onSubmit={saveEditedMember}>
+        <label>
+          Nom du personnage
+
+          <input
+            autoFocus
+            type="text"
+            value={editMember.name}
+            onChange={(event) =>
+              setEditMember((current) => ({
+                ...current,
+                name: event.target.value,
+              }))
+            }
+          />
+        </label>
+
+        <label>
+          Classe
+
+          <select
+            value={editMember.className}
+            onChange={(event) =>
+              handleEditClassChange(event.target.value)
+            }
+          >
+            {CLASSES.map((wowClass) => (
+              <option
+                value={wowClass.name}
+                key={wowClass.name}
+              >
+                {wowClass.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Spécialisation
+
+          <select
+            value={editMember.spec}
+            onChange={(event) =>
+              setEditMember((current) => ({
+                ...current,
+                spec: event.target.value,
+              }))
+            }
+          >
+            {SPECS[editMember.className].map((spec) => (
+              <option value={spec} key={spec}>
+                {spec}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Rôle
+
+          <select
+            value={editMember.role}
+            onChange={(event) =>
+              setEditMember((current) => ({
+                ...current,
+                role: event.target.value,
+              }))
+            }
+          >
+            {ROLES.map((role) => (
+              <option value={role} key={role}>
+                {role}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+  Personnage principal
+
+  <select
+    value={editMember.mainId}
+    onChange={(event) =>
+      setEditMember((current) => ({
+        ...current,
+        mainId: event.target.value,
+      }))
+    }
+  >
+    <option value="">
+      Ce personnage est un Main
+    </option>
+
+    {members
+      .filter(
+        (member) =>
+          !member.mainId &&
+          member.id !== editingMember
+      )
+      .map((member) => (
+        <option value={member.id} key={member.id}>
+          {member.name}
+        </option>
+      ))}
+  </select>
+</label>
+
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setEditingMember(null)}
+          >
+            Annuler
+          </button>
+
+          <button
+            type="submit"
+            className="primary-button"
+          >
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
         {showAddMember && (
           <div
             className="modal-overlay"
@@ -1899,6 +2222,31 @@ function handleDragEnd(event) {
                     ))}
                   </select>
                 </label>
+                <label>
+  Personnage principal
+
+  <select
+    value={newMember.mainId}
+    onChange={(event) =>
+      setNewMember((current) => ({
+        ...current,
+        mainId: event.target.value,
+      }))
+    }
+  >
+    <option value="">
+      Ce personnage est un Main
+    </option>
+
+    {members
+      .filter((member) => !member.mainId)
+      .map((member) => (
+        <option value={member.id} key={member.id}>
+          {member.name}
+        </option>
+      ))}
+  </select>
+</label>
 
                 <div className="modal-actions">
                   <button
