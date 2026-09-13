@@ -828,6 +828,15 @@ const [editMember, setEditMember] = useState({
     return;
   }
 
+console.log(
+  "DOUBLON TROUVÉ:",
+  members.filter(
+    (member) =>
+      member.name.toLowerCase() === cleanName.toLowerCase() &&
+      member.spec === newMember.spec
+  )
+);
+
   const alreadyExists = members.some(
   (member) =>
     member.name.toLowerCase() === cleanName.toLowerCase() &&
@@ -963,6 +972,17 @@ async function saveEditedMember(event) {
   );
 
   if (!confirmed) return;
+  
+  const { error: unlinkError } = await supabase
+  .from("members")
+  .update({ main_id: null })
+  .eq("main_id", memberId);
+
+if (unlinkError) {
+  console.error("Erreur détachement des alts :", unlinkError);
+  alert("Impossible de détacher les alts de ce personnage.");
+  return;
+}
 
   const { error } = await supabase
     .from("members")
