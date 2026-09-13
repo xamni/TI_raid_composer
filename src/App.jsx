@@ -811,6 +811,12 @@ const [editMember, setEditMember] = useState({
       return !alreadyInRaid && matchesSearch;
     });
   }, [members, raidMemberIds, search]);
+  const sortedRosterMembers = members
+  .filter((member) => !member.mainId)
+  .flatMap((main) => [
+    main,
+    ...members.filter((member) => member.mainId === main.id),
+  ]);
 
   async function addMember(event) {
   event.preventDefault();
@@ -1918,54 +1924,106 @@ function handleDragEnd(event) {
           </div>
         ) : (
           members
-            .filter((member) =>
-              member.name
-                .toLowerCase()
-                .includes(search.toLowerCase())
-            )
-            .map((member) => (
-              <div
-                className="roster-management-member"
-                key={member.id}
-              >
-                <img
-                  className="spec-icon"
-                  src={getSpecIcon(member)}
-                  alt={member.spec}
-                />
+  .filter((member) => !member.mainId)
+  .filter((main) => {
+    const searchLower = search.toLowerCase();
 
-                <div className="roster-management-info">
-                  <strong
-                    style={{
-                      color: getClassColor(member.className),
-                    }}
-                  >
-                    {member.name}
-                  </strong>
+    const mainMatches = main.name
+      .toLowerCase()
+      .includes(searchLower);
+
+    const altMatches = members.some(
+      (alt) =>
+        alt.mainId === main.id &&
+        alt.name.toLowerCase().includes(searchLower)
+    );
+
+    return mainMatches || altMatches;
+  })
+  .map((main) => (
+             <div className="roster-management-member">
+  <img
+    className="spec-icon"
+    src={getSpecIcon(main)}
+    alt={main.spec}
+  />
+
+             <div className="roster-management-info">
+  <strong
+    style={{
+      color: getClassColor(main.className),
+    }}
+  >
+    {main.name}
+  </strong>
 
                   <span>
-                    {member.className} • {member.spec}
-                  </span>
+  {main.className} • {main.spec}
+</span>
 
-                  <small>{member.role}</small>
+<small>{main.role}</small>
                 </div>
 <button
   className="edit-player"
-  onClick={() => openEditMember(member)}
+  onClick={() => openEditMember(main)}
   title="Modifier le membre"
 >
   ✎
 </button>
                 <button
                   className="delete-player"
-                  onClick={() => deleteMember(member.id)}
+                  onClick={() => deleteMember(main.id)}
                   title="Supprimer le membre"
                 >
                   ×
                 </button>
+
+                <div className="main-alts">
+  {members
+    .filter((alt) => alt.mainId === main.id)
+    .map((alt) => (
+      <div key={alt.id} className="alt-card">
+  <img
+  className="spec-icon"
+  src={getSpecIcon(alt)}
+  alt={alt.spec}
+/>
+
+<div className="alt-info">
+  <strong
+    style={{
+      color: getClassColor(alt.className),
+    }}
+  >
+    {alt.name}
+  </strong>
+
+  <small>
+    {alt.className} • {alt.spec}
+  </small>
+</div>
+
+  <button
+    className="edit-player"
+    onClick={() => openEditMember(alt)}
+    title="Modifier cet Alt"
+  >
+    ✎
+  </button>
+
+  <button
+    className="delete-player"
+    onClick={() => deleteMember(alt.id)}
+    title="Supprimer cet Alt"
+  >
+    ×
+  </button>
+</div>
+    ))}
+</div>
               </div>
-            ))
-        )}
+))
+)}
       </div>
     </section>
   </main>

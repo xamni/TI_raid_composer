@@ -866,7 +866,7 @@ input {
 
 .roster-management-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 
@@ -879,11 +879,52 @@ input {
   border: 1px solid #403725;
   border-radius: 3px;
   background: #181512;
+  flex-wrap: nowrap;
+}
+
+.main-alts {
+  display: flex;
+  gap: 6px;
+  margin-left: 12px;
+  flex-wrap: wrap;
+}
+
+.alt-card {
+  padding: 4px 8px;
+  border: 1px solid #403725;
+  border-radius: 3px;
+  background: #0f0d0a;
+  font-size: 12px;
+  min-width: 210px;
+display: flex;
+align-items: center;
+gap: 8px;
+}
+.alt-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.alt-info strong {
+  font-size: 13px;
+}
+
+.alt-info small {
+  color: #958a76;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.roster-management-member.is-alt {
+  margin-left: 24px;
+  opacity: 0.92;
 }
 
 .roster-management-info {
   min-width: 0;
-  flex: 1;
+  flex: 0 0 150px;
   display: flex;
   flex-direction: column;
 }
