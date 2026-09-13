@@ -599,7 +599,7 @@ input {
 }
 
 .bench-empty {
-  min-height: 52px;
+  min-height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
