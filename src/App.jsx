@@ -463,11 +463,16 @@ function DraggableBenchMember({
     )}
 
     <div className="bench-member-info">
-      <strong>{member.name}</strong>
-      <span>
-        {member.className} • {member.spec}
-      </span>
-    </div>
+  <strong
+    style={{
+      color: getClassColor(member.className),
+    }}
+  >
+    {member.name}
+  </strong>
+
+  <span>{member.spec}</span>
+</div>
 
     <button
       className="remove-player"
@@ -558,48 +563,44 @@ function DraggableSwitchMember({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="switch-member"
-      {...listeners}
-      {...attributes}
-    >
-      <img
-        className="spec-icon"
-        src={getSpecIcon(member)}
-        alt={`${member.className} ${member.spec}`}
-      />
+ return (
+  <div
+    ref={setNodeRef}
+    style={style}
+    className="switch-member"
+    {...listeners}
+    {...attributes}
+  >
+    <img
+      className="spec-icon"
+      src={getSpecIcon(member)}
+      alt={member.spec}
+    />
 
-      <div className="switch-member-info">
-        <strong
-          style={{
-            color: getClassColor(member.className),
-          }}
-        >
-          {member.name}
-        </strong>
-
-        <span>
-          {member.className} • {member.spec}
-        </span>
-
-        <small>{member.role}</small>
-      </div>
-
-      <button
-        className="remove-player"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.stopPropagation();
-          removeFromSwitch(switchId, member.id);
+    <div className="switch-member-info">
+      <strong
+        style={{
+          color: getClassColor(member.className),
         }}
-        title="Retirer du switch"
       >
-        ×
-      </button>
+        {member.name}
+      </strong>
+
+      <span>{member.spec}</span>
     </div>
+
+    <button
+      className="remove-player"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        removeFromSwitch(switchId, member.id);
+      }}
+      title="Retirer du switch"
+    >
+      ×
+    </button>
+  </div>
   );
 }
 function SwitchPanel({
