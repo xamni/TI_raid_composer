@@ -1103,3 +1103,48 @@ gap: 8px;
   font-size: 12px;
   font-weight: 600;
 }
+
+.available-specs {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.available-spec {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 1px solid #403725;
+  border-radius: 3px;
+  background: #0f0d0a;
+}
+
+.available-spec img {
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+}
+
+.alt-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.alt-name-row .available-specs {
+  margin-top: 0;
+  gap: 3px;
+  flex-wrap: nowrap;
+}
+
+.alt-name-row .available-spec {
+  padding: 1px;
+}
+
+.alt-name-row .available-spec img {
+  width: 16px;
+  height: 16px;
+}

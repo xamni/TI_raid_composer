@@ -715,9 +715,17 @@ const [editMember, setEditMember] = useState({
 
   const [selectedClass, setSelectedClass] = useState("Warrior");
 
-  const [raidSpecs, setRaidSpecs] = useState({});
+  const [raidSpecs, setRaidSpecs] = useState(() => {
+  const saved = localStorage.getItem("wowRaidSpecs");
+
+  return saved ? JSON.parse(saved) : {};
+});
 
   const [specPickerMember, setSpecPickerMember] = useState(null);
+
+  useEffect(() => {
+  localStorage.setItem("wowRaidSpecs", JSON.stringify(raidSpecs));
+}, [raidSpecs]);
 
   const [activeView, setActiveView] = useState("composition");
 
@@ -1024,6 +1032,11 @@ if (unlinkError) {
     alert("Impossible de supprimer le membre.");
     return;
   }
+  setRaidSpecs((current) => {
+  const updated = { ...current };
+  delete updated[memberId];
+  return updated;
+});
 
   setMembers((current) =>
     current.filter((item) => item.id !== memberId)
@@ -1108,8 +1121,13 @@ function updateSwitchBoss(switchId, bossName) {
     .filter(Boolean);
 
   return GROUP_BUFFS.filter((buff) =>
-    groupMembers.some((member) => buff.condition(member))
-    );
+  groupMembers.some((member) =>
+    buff.condition({
+      ...member,
+      spec: getRaidSpec(member),
+    })
+  )
+);
   }
 
   function getRaidSpec(member) {
@@ -1997,7 +2015,7 @@ function handleDragEnd(event) {
     return mainMatches || altMatches;
   })
   .map((main) => (
-             <div className="roster-management-member">
+             <div key={main.id} className="roster-management-member">
   <img
     className="spec-icon"
     src={getSpecIcon(main)}
@@ -2018,6 +2036,26 @@ function handleDragEnd(event) {
 </span>
 
 <small>{main.role}</small>
+
+{main.availableSpecs?.length > 0 && (
+  <div className="available-specs">
+    {main.availableSpecs.map((spec) => (
+      <div
+  key={spec}
+  className="available-spec"
+  title={spec}
+>
+  <img
+    src={getSpecIcon({
+      ...main,
+      spec,
+    })}
+    alt={spec}
+  />
+</div>
+    ))}
+  </div>
+)}
                 </div>
 <button
   className="edit-player"
@@ -2046,17 +2084,36 @@ function handleDragEnd(event) {
 />
 
 <div className="alt-info">
-  <strong
-    style={{
-      color: getClassColor(alt.className),
-    }}
-  >
+  <div className="alt-name-row">
+  <strong style={{ color: getClassColor(alt.className) }}>
     {alt.name}
   </strong>
+
+  {alt.availableSpecs?.length > 0 && (
+    <div className="available-specs alt-available-specs">
+      {alt.availableSpecs.map((spec) => (
+        <div
+          key={spec}
+          className="available-spec"
+          title={spec}
+        >
+          <img
+            src={getSpecIcon({
+              ...alt,
+              spec,
+            })}
+            alt={spec}
+          />
+        </div>
+      ))}
+    </div>
+  )}
+</div>
 
   <small>
     {alt.className} • {alt.spec}
   </small>
+
 </div>
 
   <button
