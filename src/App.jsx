@@ -191,6 +191,8 @@ function DraggablePlayer({
   slotIndex,
   getClassColor,
   getSpecIcon,
+  getRaidSpec,
+  setSpecPickerMember,
   removeFromRaid,
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -223,15 +225,29 @@ function DraggablePlayer({
     >
       <img
   className="spec-icon"
-  src={getSpecIcon(member)}
-  alt={`${member.className} ${member.spec}`}
+  src={getSpecIcon({
+    ...member,
+    spec: getRaidSpec(member),
+  })}
+  alt={`${member.className} ${getRaidSpec(member)}`}
 />
-
       <div className="slot-player-info">
         <strong style={{ color: getClassColor(member.className) }}>
           {member.name}
         </strong>
-        <span>{member.spec}</span>
+        <span>{getRaidSpec(member)}</span>
+        {member.availableSpecs?.length > 0 && (
+  <button
+    className="spec-switch"
+    onClick={(event) => {
+      event.stopPropagation();
+      setSpecPickerMember(member);
+    }}
+    title="Changer la spécialisation pour ce raid"
+  >
+    ⇄
+  </button>
+)}
       </div>
 
       <button
@@ -351,6 +367,8 @@ function DroppableSlot({
   member,
   getClassColor,
   getSpecIcon,
+  getRaidSpec,
+  setSpecPickerMember,
   removeFromRaid,
   onSelectSlot,
 }) {
@@ -370,6 +388,8 @@ function DroppableSlot({
           slotIndex={slotIndex}
           getClassColor={getClassColor}
           getSpecIcon={getSpecIcon}
+          getRaidSpec={getRaidSpec}
+          setSpecPickerMember={setSpecPickerMember}
           removeFromRaid={removeFromRaid}
         />
       ) : (
@@ -690,9 +710,14 @@ const [editMember, setEditMember] = useState({
   spec: SPECS["Warrior"][0],
   role: ROLES[0],
   mainId: "",
+  availableSpecs: [],
 });
 
   const [selectedClass, setSelectedClass] = useState("Warrior");
+
+  const [raidSpecs, setRaidSpecs] = useState({});
+
+  const [specPickerMember, setSpecPickerMember] = useState(null);
 
   const [activeView, setActiveView] = useState("composition");
 
@@ -743,6 +768,7 @@ const [editMember, setEditMember] = useState({
       spec: member.spec,
       role: member.role,
       mainId: member.main_id,
+      availableSpecs: member.available_specs || [],
     }));
 
     setMembers(formattedMembers);
@@ -782,6 +808,7 @@ const [editMember, setEditMember] = useState({
     spec: "Protection",
     role: "Tank",
     mainId: "",
+    availableSpecs: [],
   });
 
   const sensors = useSensors(
@@ -855,6 +882,7 @@ console.log(
   class_name: newMember.className,
   spec: newMember.spec,
   role: newMember.role,
+  available_specs: newMember.availableSpecs,
   main_id: newMember.mainId
     ? Number(newMember.mainId)
     : null,
@@ -898,6 +926,7 @@ function openEditMember(member) {
   spec: member.spec,
   role: member.role,
   mainId: member.mainId || "",
+  availableSpecs: member.availableSpecs || [],
 });
 }
 
@@ -928,6 +957,7 @@ async function saveEditedMember(event) {
     class_name: editMember.className,
     spec: editMember.spec,
     role: editMember.role,
+    available_specs: editMember.availableSpecs,
     main_id: editMember.mainId
       ? Number(editMember.mainId)
       : null,
@@ -1081,6 +1111,10 @@ function updateSwitchBoss(switchId, bossName) {
     groupMembers.some((member) => buff.condition(member))
     );
   }
+
+  function getRaidSpec(member) {
+  return raidSpecs[member.id] || member.spec;
+}
 
 
   function handleClassChange(className) {
@@ -1834,6 +1868,8 @@ function handleDragEnd(event) {
                           member={member}
                           getClassColor={getClassColor}
                           getSpecIcon={getSpecIcon}
+                          getRaidSpec={getRaidSpec}
+                          setSpecPickerMember={setSpecPickerMember}
                           removeFromRaid={removeFromRaid}
                           onSelectSlot={(index) => {
                             setSelectedSlot(index);
@@ -2051,6 +2087,72 @@ function handleDragEnd(event) {
         <footer className="app-footer">
   Crafted for Totale Impro by Xamni • 2026
 </footer>
+
+{specPickerMember && (
+  <div
+    className="modal-overlay"
+    onMouseDown={() => setSpecPickerMember(null)}
+  >
+    <div
+      className="modal spec-picker-modal"
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <div className="modal-header">
+        <div>
+          <h2>{specPickerMember.name}</h2>
+          <p>Spécialisation pour ce raid</p>
+        </div>
+
+        <button
+          className="modal-close"
+          onClick={() => setSpecPickerMember(null)}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="spec-picker-options">
+        {[
+  ...new Set([
+    specPickerMember.spec,
+    ...(specPickerMember.availableSpecs || []),
+  ]),
+].map(
+          (spec) => (
+            <button
+              key={spec}
+              className={
+  getRaidSpec(specPickerMember) === spec ? "active" : ""
+}
+              onClick={() => {
+                setRaidSpecs((current) => ({
+                  ...current,
+                  [specPickerMember.id]: spec,
+                }));
+
+                setSpecPickerMember(null);
+              }}
+            >
+              <>
+  <img
+    className="spec-picker-icon"
+    src={getSpecIcon({
+      ...specPickerMember,
+      spec,
+    })}
+    alt={spec}
+  />
+
+  <span>{spec}</span>
+</>
+            </button>
+          )
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
 {editingMember && (
   <div
     className="modal-overlay"
@@ -2132,6 +2234,31 @@ function handleDragEnd(event) {
             ))}
           </select>
         </label>
+        <label>
+  Autres spécialisations jouables
+
+  {SPECS[editMember.className]
+    .filter((spec) => spec !== editMember.spec)
+    .map((spec) => (
+      <label key={spec}>
+        <input
+          type="checkbox"
+          checked={editMember.availableSpecs.includes(spec)}
+          onChange={(event) => {
+            setEditMember((current) => ({
+              ...current,
+              availableSpecs: event.target.checked
+                ? [...current.availableSpecs, spec]
+                : current.availableSpecs.filter(
+                    (item) => item !== spec
+                  ),
+            }));
+          }}
+        />
+        {spec}
+      </label>
+    ))}
+</label>
 
         <label>
           Rôle
@@ -2281,6 +2408,31 @@ function handleDragEnd(event) {
                     ))}
                   </select>
                 </label>
+                <label>
+  Autres spécialisations jouables
+
+  {SPECS[newMember.className]
+    .filter((spec) => spec !== newMember.spec)
+    .map((spec) => (
+      <label key={spec}>
+        <input
+          type="checkbox"
+          checked={newMember.availableSpecs.includes(spec)}
+          onChange={(event) => {
+            setNewMember((current) => ({
+              ...current,
+              availableSpecs: event.target.checked
+                ? [...current.availableSpecs, spec]
+                : current.availableSpecs.filter(
+                    (item) => item !== spec
+                  ),
+            }));
+          }}
+        />
+        {spec}
+      </label>
+    ))}
+</label>
 
                 <label>
                   Rôle

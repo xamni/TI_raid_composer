@@ -1025,3 +1025,81 @@ gap: 8px;
 .edit-player:hover {
   background: #272117;
 }
+
+.modal label label {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: space-between;
+  width: 50%;
+  gap: 12px;
+}
+
+.modal label label input[type="checkbox"] {
+  width: 50%;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.spec-switch {
+  width: auto;
+  min-width: 28px;
+  padding: 2px 6px;
+  margin-left: 0;
+  margin-top: 3px;
+  align-self: flex-start;
+  border: 1px solid #66512d;
+  border-radius: 3px;
+  background: #17130d;
+  color: #d6b66f;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.spec-switch:hover {
+  background: #272117;
+}
+
+.spec-picker-options {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+}
+
+.spec-picker-options button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+
+  min-width: 90px;
+  padding: 10px;
+
+  border: 1px solid #403725;
+  border-radius: 4px;
+  background: #0f0d0a;
+  color: #d6b66f;
+  cursor: pointer;
+}
+
+.spec-picker-options button:hover {
+  border-color: #8b713b;
+  background: #1b170f;
+}
+
+.spec-picker-options button.active {
+  border-color: #d6b66f;
+  background: #211c12;
+  box-shadow: 0 0 8px rgba(214, 182, 111, 0.35);
+}
+
+.spec-picker-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+}
+
+.spec-picker-options button span {
+  font-size: 12px;
+  font-weight: 600;
+}
