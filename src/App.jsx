@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -9,6 +9,7 @@ import {
 } from "@dnd-kit/core";
 import "./App.css";
 import { supabase } from "./supabase";
+import { toPng } from "html-to-image";
 
 const GROUPS = [1, 2, 3, 4, 5];
 
@@ -729,6 +730,10 @@ const [editMember, setEditMember] = useState({
 
   const [activeView, setActiveView] = useState("composition");
 
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+
+  const compositionExportRef = useRef(null);
+
   const [raidSlots, setRaidSlots] = useState(() => {
     const saved = localStorage.getItem("wowRaidSlots");
     return saved
@@ -852,6 +857,36 @@ const [editMember, setEditMember] = useState({
     main,
     ...members.filter((member) => member.mainId === main.id),
   ]);
+
+const shareId =
+  window.location.pathname.startsWith("/share/")
+    ? window.location.pathname.split("/share/")[1]
+    : null;
+
+    useEffect(() => {
+  if (!shareId) return;
+
+  async function loadSharedComposition() {
+    const { data, error } = await supabase
+      .from("raid_shares")
+      .select("*")
+      .eq("id", shareId)
+      .single();
+
+    if (error) {
+      console.error("Erreur chargement partage :", error);
+      alert("Impossible de charger cette composition partagée.");
+      return;
+    }
+
+    setRaidSlots(data.raid_slots || []);
+    setBenchMembers(data.bench || []);
+    setSwitches(data.switches || []);
+    setRaidSpecs(data.raid_specs || {});
+  }
+
+  loadSharedComposition();
+}, [shareId]);
 
   async function addMember(event) {
   event.preventDefault();
@@ -1114,7 +1149,104 @@ function updateSwitchBoss(switchId, bossName) {
   function getSpecIcon(member) {
   return SPEC_ICONS[member.className]?.[member.spec] || "";
   }
-  
+ async function exportCompositionAsPng() {
+  if (!compositionExportRef.current) return;
+
+  const element = compositionExportRef.current;
+
+  const raidGroups = element.querySelectorAll(".raid-group");
+  const benchHeader = element.querySelector(".bench-header");
+
+  if (raidGroups.length < 3 || !benchHeader) return;
+
+  const thirdGroup = raidGroups[2];
+
+  const exportRect = element.getBoundingClientRect();
+  const groupRect = thirdGroup.getBoundingClientRect();
+  const benchRect = benchHeader.getBoundingClientRect();
+
+  const oldPosition = element.style.position;
+
+  element.style.position = "relative";
+
+  const logo = document.createElement("img");
+
+  logo.src = "/ti-logo-transparent.png";
+  logo.alt = "TI";
+  logo.style.position = "absolute";
+  logo.style.width = "140px";
+  logo.style.height = "auto";
+  logo.style.pointerEvents = "none";
+  logo.style.zIndex = "0";
+
+  const logoX =
+    groupRect.left -
+    exportRect.left +
+    groupRect.width / 2;
+
+  const logoY =
+    benchRect.top -
+    exportRect.top +
+    benchRect.height / 2 + 40;
+
+  logo.style.left = `${logoX}px`;
+  logo.style.top = `${logoY}px`;
+  logo.style.transform = "translate(-50%, -50%)";
+
+  element.appendChild(logo);
+
+  await new Promise((resolve) => {
+    if (logo.complete) {
+      resolve();
+    } else {
+      logo.onload = resolve;
+      logo.onerror = resolve;
+    }
+  });
+
+  const dataUrl = await toPng(element, {
+    cacheBust: true,
+    pixelRatio: 2,
+  });
+
+  logo.remove();
+
+  element.style.position = oldPosition;
+
+  const link = document.createElement("a");
+  link.download = "totale-impro-composition.png";
+  link.href = dataUrl;
+  link.click();
+
+  setShareMenuOpen(false);
+}
+async function createShareLink() {
+  const shareId = crypto.randomUUID().slice(0, 8);
+
+  const { error } = await supabase
+    .from("raid_shares")
+    .insert({
+      id: shareId,
+      raid_slots: raidSlots,
+      bench: benchMembers,
+      switches: switches,
+      raid_specs: raidSpecs,
+    });
+
+  if (error) {
+    console.error("Erreur création partage :", error);
+    alert("Impossible de créer le lien de partage.");
+    return;
+  }
+
+  const shareUrl = `${window.location.origin}/share/${shareId}`;
+
+  await navigator.clipboard.writeText(shareUrl);
+
+  alert("Lien copié dans le presse-papiers !");
+
+  setShareMenuOpen(false);
+}
   function getGroupBuffs(groupMemberIds) {
   const groupMembers = groupMemberIds
     .map((memberId) => getMember(memberId))
@@ -1779,9 +1911,29 @@ function handleDragEnd(event) {
     </div>
   </div>
 
-  <div className="raid-count">{raidCount} / 25</div>
+  <div className="share-menu">
+  <button
+    className="share-button"
+    onClick={() => setShareMenuOpen((current) => !current)}
+  >
+    Partager
+  </button>
+
+  {shareMenuOpen && (
+    <div className="share-dropdown">
+      <button onClick={exportCompositionAsPng}>
+  🖼 Exporter en PNG
+</button>
+
+      <button onClick={createShareLink}>
+  🔗 Créer un lien
+</button>
+    </div>
+  )}
+</div>
 </header>
-    <nav className="main-tabs">
+
+<nav className="main-tabs">
       <button
     className={activeView === "composition" ? "active" : ""}
     onClick={() => setActiveView("composition")}
@@ -1795,6 +1947,7 @@ function handleDragEnd(event) {
   >
     Roster
   </button>
+  <div className="raid-count">{raidCount} / 25</div>
 </nav>
 
     {activeView === "composition" && (
@@ -1852,7 +2005,10 @@ function handleDragEnd(event) {
     </div>
   </DroppableRoster>
 </aside>
-          
+     <div
+  className="composition-export"
+  ref={compositionExportRef}
+>
           <section className="raid-panel">
             {GROUPS.map((groupNumber) => {
               const groupStart = (groupNumber - 1) * 5;
@@ -1963,6 +2119,7 @@ function handleDragEnd(event) {
             </div>
 
           </section>
+          </div>
         </main>
         )}
         {activeView === "roster" && (
