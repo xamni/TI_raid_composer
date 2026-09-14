@@ -564,7 +564,14 @@ function DraggableSwitchMember({
   getClassColor,
   getSpecIcon,
   removeFromSwitch,
+  switchSpecs,
+  setSwitchSpecs,
 }) {
+  const switchSpecKey = `${switchId}-${member.id}`;
+
+const currentSwitchSpec =
+  switchSpecs[switchSpecKey] || member.spec;
+
   const {
     attributes,
     listeners,
@@ -597,7 +604,10 @@ function DraggableSwitchMember({
   >
     <img
       className="spec-icon"
-      src={getSpecIcon(member)}
+      src={getSpecIcon({
+  ...member,
+  spec: currentSwitchSpec,
+})}
       alt={member.spec}
     />
 
@@ -610,7 +620,35 @@ function DraggableSwitchMember({
         {member.name}
       </strong>
 
-      <span>{member.spec}</span>
+      <span>{currentSwitchSpec}</span>
+      {member.availableSpecs?.length > 0 && (
+  <button
+    className="spec-switch"
+    onClick={(event) => {
+      event.stopPropagation();
+
+      const specs = [
+        ...new Set([
+          member.spec,
+          ...(member.availableSpecs || []),
+        ]),
+      ];
+
+      const currentIndex = specs.indexOf(currentSwitchSpec);
+
+      const nextSpec =
+        specs[(currentIndex + 1) % specs.length];
+
+      setSwitchSpecs((current) => ({
+        ...current,
+        [switchSpecKey]: nextSpec,
+      }));
+    }}
+    title="Changer la spécialisation dans ce Switch"
+  >
+    ⇄
+  </button>
+)}
     </div>
 
     <button
@@ -635,6 +673,8 @@ function SwitchPanel({
   updateSwitchBoss,
   removeSwitch,
   removeFromSwitch,
+  switchSpecs,
+  setSwitchSpecs,
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `switch-zone-${switchData.id}`,
@@ -692,6 +732,8 @@ function SwitchPanel({
                 getClassColor={getClassColor}
                 getSpecIcon={getSpecIcon}
                 removeFromSwitch={removeFromSwitch}
+                switchSpecs={switchSpecs}
+                setSwitchSpecs={setSwitchSpecs}
               />
             );
           })
@@ -717,16 +759,27 @@ const [editMember, setEditMember] = useState({
   const [selectedClass, setSelectedClass] = useState("Warrior");
 
   const [raidSpecs, setRaidSpecs] = useState(() => {
+
   const saved = localStorage.getItem("wowRaidSpecs");
 
   return saved ? JSON.parse(saved) : {};
 });
-
+const [switchSpecs, setSwitchSpecs] = useState(() => {
+  const saved = localStorage.getItem("wowSwitchSpecs");
+  return saved ? JSON.parse(saved) : {};
+});
   const [specPickerMember, setSpecPickerMember] = useState(null);
 
   useEffect(() => {
   localStorage.setItem("wowRaidSpecs", JSON.stringify(raidSpecs));
 }, [raidSpecs]);
+
+  useEffect(() => {
+  localStorage.setItem(
+    "wowSwitchSpecs",
+    JSON.stringify(switchSpecs)
+  );
+}, [switchSpecs]);
 
   const [activeView, setActiveView] = useState("composition");
 
@@ -883,6 +936,7 @@ const shareId =
     setBenchMembers(data.bench || []);
     setSwitches(data.switches || []);
     setRaidSpecs(data.raid_specs || {});
+    setSwitchSpecs(data.switch_specs || {});
   }
 
   loadSharedComposition();
@@ -1231,6 +1285,7 @@ async function createShareLink() {
       bench: benchMembers,
       switches: switches,
       raid_specs: raidSpecs,
+      switch_specs: switchSpecs,
     });
 
   if (error) {
@@ -2113,6 +2168,8 @@ function handleDragEnd(event) {
                     updateSwitchBoss={updateSwitchBoss}
                     removeSwitch={removeSwitch}
                     removeFromSwitch={removeFromSwitch}
+                    switchSpecs={switchSpecs}
+                    setSwitchSpecs={setSwitchSpecs}
                   />
                 ))}
               </div>
