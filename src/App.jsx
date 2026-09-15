@@ -864,6 +864,20 @@ const [switchSpecs, setSwitchSpecs] = useState(() => {
   };
   }, []);
 
+  function clearComposition() {
+  const confirmed = window.confirm(
+    "Vider complètement le Raid, le Bench et les Switchs ?"
+  );
+
+  if (!confirmed) return;
+
+  setRaidSlots(Array.from({ length: 25 }, () => null));
+  setBenchMembers([]);
+  setSwitches([]);
+  setRaidSpecs({});
+  setSwitchSpecs({});
+}
+
   const [showAddMember, setShowAddMember] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [search, setSearch] = useState("");
@@ -2002,7 +2016,17 @@ function handleDragEnd(event) {
   >
     Roster
   </button>
+  <div className="raid-count-actions">
+  <button
+    className="clear-composition-button"
+    onClick={clearComposition}
+    title="Vider la composition"
+  >
+    Clear
+  </button>
+
   <div className="raid-count">{raidCount} / 25</div>
+</div>
 </nav>
 
     {activeView === "composition" && (

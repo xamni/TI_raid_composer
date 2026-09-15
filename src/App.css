@@ -1221,3 +1221,85 @@ gap: 8px;
   background: #211c12;
   color: #d6b66f;
 }
+
+.raid-count-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.raid-count,
+.clear-composition-button {
+  box-sizing: border-box;
+  min-width: 68px;
+  height: 36px;
+  padding: 0 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  border-radius: 4px;
+
+  color: #d6b85c;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+
+  margin: 0;
+}
+
+.clear-composition-button {
+  appearance: none;
+  cursor: pointer;
+}
+
+.clear-composition-button:hover {
+  background: rgba(201, 168, 76, 0.08);
+  border-color: rgba(201, 168, 76, 0.5);
+}
+
+.raid-count-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.raid-count-actions .raid-count,
+.raid-count-actions .clear-composition-button {
+  box-sizing: border-box;
+  min-width: 68px;
+  height: 36px;
+  padding: 0 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(201, 168, 76, 0.3) !important;
+  border-radius: 4px !important;
+
+  color: #d6b85c !important;
+  font-family: inherit;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  line-height: 1;
+
+  margin: 0;
+}
+
+.raid-count-actions .clear-composition-button {
+  appearance: none;
+  cursor: pointer;
+}
+
+.raid-count-actions .clear-composition-button:hover {
+  background: rgba(201, 168, 76, 0.08) !important;
+  border-color: rgba(201, 168, 76, 0.55) !important;
+}
