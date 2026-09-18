@@ -193,6 +193,8 @@ function DraggablePlayer({
   getClassColor,
   getSpecIcon,
   getRaidSpec,
+  getRaidDisplayName,
+  setAliasPickerMember,
   setSpecPickerMember,
   removeFromRaid,
 }) {
@@ -233,9 +235,26 @@ function DraggablePlayer({
   alt={`${member.className} ${getRaidSpec(member)}`}
 />
       <div className="slot-player-info">
-        <strong style={{ color: getClassColor(member.className) }}>
-          {member.name}
-        </strong>
+       <strong
+  style={{
+    color: getClassColor(member.className),
+    cursor: member.aliases?.length ? "pointer" : "default",
+  }}
+  onClick={(event) => {
+    event.stopPropagation();
+
+    if (member.aliases?.length) {
+      setAliasPickerMember(member);
+    }
+  }}
+  title={
+    member.aliases?.length
+      ? "Cliquer pour choisir le nom affiché"
+      : undefined
+  }
+>
+  {getRaidDisplayName(member)}
+</strong>
         <span>{getRaidSpec(member)}</span>
         {member.availableSpecs?.length > 0 && (
   <button
@@ -369,6 +388,8 @@ function DroppableSlot({
   getClassColor,
   getSpecIcon,
   getRaidSpec,
+  getRaidDisplayName,
+  setAliasPickerMember,
   setSpecPickerMember,
   removeFromRaid,
   onSelectSlot,
@@ -390,6 +411,8 @@ function DroppableSlot({
           getClassColor={getClassColor}
           getSpecIcon={getSpecIcon}
           getRaidSpec={getRaidSpec}
+          getRaidDisplayName={getRaidDisplayName}
+          setAliasPickerMember={setAliasPickerMember}
           setSpecPickerMember={setSpecPickerMember}
           removeFromRaid={removeFromRaid}
         />
@@ -428,6 +451,9 @@ function DraggableBenchMember({
   member,
   getClassColor,
   getSpecIcon,
+  getBenchDisplayName,
+  setAliasPickerMember,
+  setAliasPickerSource,
   removeFromBench,
 }) {
   const {
@@ -488,12 +514,26 @@ function DraggableBenchMember({
 
     <div className="bench-member-info">
   <strong
-    style={{
-      color: getClassColor(member.className),
-    }}
-  >
-    {member.name}
-  </strong>
+  style={{
+    color: getClassColor(member.className),
+    cursor: member.aliases?.length ? "pointer" : "default",
+  }}
+  onClick={(event) => {
+    event.stopPropagation();
+
+    if (member.aliases?.length) {
+      setAliasPickerSource("bench");
+      setAliasPickerMember(member);
+    }
+  }}
+  title={
+    member.aliases?.length
+      ? "Cliquer pour choisir le nom affiché"
+      : undefined
+  }
+>
+  {getBenchDisplayName(member)}
+</strong>
 
   <span>{member.spec}</span>
 </div>
@@ -518,6 +558,9 @@ function DroppableBench({
   getMember,
   getClassColor,
   getSpecIcon,
+  getBenchDisplayName,
+  setAliasPickerMember,
+  setAliasPickerSource,
   removeFromBench,
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -549,6 +592,9 @@ function DroppableBench({
                 member={member}
                 getClassColor={getClassColor}
                 getSpecIcon={getSpecIcon}
+                getBenchDisplayName={getBenchDisplayName}
+                setAliasPickerMember={setAliasPickerMember}
+                setAliasPickerSource={setAliasPickerSource}
                 removeFromBench={removeFromBench}
               />
             );
@@ -566,6 +612,10 @@ function DraggableSwitchMember({
   removeFromSwitch,
   switchSpecs,
   setSwitchSpecs,
+  getSwitchDisplayName,
+  setAliasPickerMember,
+  setAliasPickerSource,
+  setAliasPickerSwitchId,
 }) {
   const switchSpecKey = `${switchId}-${member.id}`;
 
@@ -613,12 +663,27 @@ const currentSwitchSpec =
 
     <div className="switch-member-info">
       <strong
-        style={{
-          color: getClassColor(member.className),
-        }}
-      >
-        {member.name}
-      </strong>
+  style={{
+    color: getClassColor(member.className),
+    cursor: member.aliases?.length ? "pointer" : "default",
+  }}
+  onClick={(event) => {
+    event.stopPropagation();
+
+    if (member.aliases?.length) {
+      setAliasPickerSource("switch");
+      setAliasPickerSwitchId(switchId);
+      setAliasPickerMember(member);
+    }
+  }}
+  title={
+    member.aliases?.length
+      ? "Cliquer pour choisir le nom affiché"
+      : undefined
+  }
+>
+  {getSwitchDisplayName(member, switchId)}
+</strong>
 
       <span>{currentSwitchSpec}</span>
       {member.availableSpecs?.length > 0 && (
@@ -675,6 +740,10 @@ function SwitchPanel({
   removeFromSwitch,
   switchSpecs,
   setSwitchSpecs,
+  getSwitchDisplayName,
+  setAliasPickerMember,
+  setAliasPickerSource,
+  setAliasPickerSwitchId,
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `switch-zone-${switchData.id}`,
@@ -734,6 +803,10 @@ function SwitchPanel({
                 removeFromSwitch={removeFromSwitch}
                 switchSpecs={switchSpecs}
                 setSwitchSpecs={setSwitchSpecs}
+                getSwitchDisplayName={getSwitchDisplayName}
+                setAliasPickerMember={setAliasPickerMember}
+                setAliasPickerSource={setAliasPickerSource}
+                setAliasPickerSwitchId={setAliasPickerSwitchId}
               />
             );
           })
@@ -774,12 +847,43 @@ const [switchSpecs, setSwitchSpecs] = useState(() => {
   localStorage.setItem("wowRaidSpecs", JSON.stringify(raidSpecs));
 }, [raidSpecs]);
 
+
   useEffect(() => {
   localStorage.setItem(
     "wowSwitchSpecs",
     JSON.stringify(switchSpecs)
   );
 }, [switchSpecs]);
+
+const [raidAliases, setRaidAliases] = useState(() => {
+  const saved = localStorage.getItem("wowRaidAliases");
+  return saved ? JSON.parse(saved) : {};
+});
+
+const [benchAliases, setBenchAliases] = useState(() => {
+  const saved = localStorage.getItem("wowBenchAliases");
+  return saved ? JSON.parse(saved) : {};
+});
+
+useEffect(() => {
+  localStorage.setItem(
+    "wowBenchAliases",
+    JSON.stringify(benchAliases)
+  );
+}, [benchAliases]);
+
+useEffect(() => {
+  localStorage.setItem(
+    "wowRaidAliases",
+    JSON.stringify(raidAliases)
+  );
+}, [raidAliases]);
+
+const [aliasPickerMember, setAliasPickerMember] = useState(null);
+
+const [aliasPickerSource, setAliasPickerSource] = useState(null);
+
+const [aliasPickerSwitchId, setAliasPickerSwitchId] = useState(null);
 
   const [activeView, setActiveView] = useState("composition");
 
@@ -826,6 +930,10 @@ const [switchSpecs, setSwitchSpecs] = useState(() => {
       console.error("Erreur chargement roster :", error);
       return;
     }
+    console.log(
+  "AAYLAA BRUT SUPABASE :",
+  data.find((member) => member.id === 28)
+);
 
     const formattedMembers = data.map((member) => ({
       id: member.id,
@@ -835,6 +943,7 @@ const [switchSpecs, setSwitchSpecs] = useState(() => {
       role: member.role,
       mainId: member.main_id,
       availableSpecs: member.available_specs || [],
+      aliases: member.aliases || [],
     }));
 
     setMembers(formattedMembers);
@@ -875,6 +984,9 @@ const [switchSpecs, setSwitchSpecs] = useState(() => {
   setBenchMembers([]);
   setSwitches([]);
   setRaidSpecs({});
+  setRaidAliases({});
+  setSwitchAliases({});
+  setBenchAliases({});
   setSwitchSpecs({});
 }
 
@@ -889,6 +1001,7 @@ const [switchSpecs, setSwitchSpecs] = useState(() => {
     role: "Tank",
     mainId: "",
     availableSpecs: [],
+    aliases: [],
   });
 
   const sensors = useSensors(
@@ -994,6 +1107,7 @@ console.log(
   spec: newMember.spec,
   role: newMember.role,
   available_specs: newMember.availableSpecs,
+  aliases: newMember.aliases || [],
   main_id: newMember.mainId
     ? Number(newMember.mainId)
     : null,
@@ -1014,6 +1128,7 @@ console.log(
     className: data.class_name,
     spec: data.spec,
     role: data.role,
+    aliases: data.aliases || [],
   };
 
   setMembers((current) => [...current, member]);
@@ -1024,6 +1139,7 @@ console.log(
     spec: "Protection",
     role: "Tank",
     mainId: "",
+    aliases: [],
   });
 
   setShowAddMember(false);
@@ -1038,6 +1154,7 @@ function openEditMember(member) {
   role: member.role,
   mainId: member.mainId || "",
   availableSpecs: member.availableSpecs || [],
+  aliases: member.aliases || [],
 });
 }
 
@@ -1060,7 +1177,6 @@ async function saveEditedMember(event) {
     alert("Le nom du personnage est obligatoire.");
     return;
   }
-
   const { error } = await supabase
   .from("members")
   .update({
@@ -1069,6 +1185,7 @@ async function saveEditedMember(event) {
     spec: editMember.spec,
     role: editMember.role,
     available_specs: editMember.availableSpecs,
+    aliases: editMember.aliases || [],
     main_id: editMember.mainId
       ? Number(editMember.mainId)
       : null,
@@ -1300,6 +1417,9 @@ async function createShareLink() {
       switches: switches,
       raid_specs: raidSpecs,
       switch_specs: switchSpecs,
+      raid_aliases: raidAliases,
+      bench_aliases: benchAliases,
+      switch_aliases: switchAliases,
     });
 
   if (error) {
@@ -1335,6 +1455,36 @@ async function createShareLink() {
   return raidSpecs[member.id] || member.spec;
 }
 
+function getRaidDisplayName(member) {
+  return raidAliases[member.id] || member.name;
+}
+
+const [switchAliases, setSwitchAliases] = useState(() => {
+  const saved = localStorage.getItem("wowSwitchAliases");
+  return saved ? JSON.parse(saved) : {};
+});
+
+useEffect(() => {
+  localStorage.setItem(
+    "wowSwitchAliases",
+    JSON.stringify(switchAliases)
+  );
+}, [switchAliases]);
+
+function getBenchDisplayName(member) {
+  return benchAliases[member.id] || member.name;
+}
+
+function getSwitchDisplayName(member, switchId) {
+  const key = `${switchId}-${member.id}`;
+  return switchAliases[key] || member.name;
+}
+
+function closeAliasPicker() {
+  setAliasPickerMember(null);
+  setAliasPickerSource(null);
+  setAliasPickerSwitchId(null);
+}
 
   function handleClassChange(className) {
     setNewMember((current) => ({
@@ -2018,12 +2168,12 @@ function handleDragEnd(event) {
   </button>
   <div className="raid-count-actions">
   <button
-    className="clear-composition-button"
-    onClick={clearComposition}
-    title="Vider la composition"
-  >
-    Clear
-  </button>
+  className="raid-count clear-composition-button"
+  onClick={clearComposition}
+  title="Vider la composition"
+>
+  Clear
+</button>
 
   <div className="raid-count">{raidCount} / 25</div>
 </div>
@@ -2122,6 +2272,8 @@ function handleDragEnd(event) {
                           getClassColor={getClassColor}
                           getSpecIcon={getSpecIcon}
                           getRaidSpec={getRaidSpec}
+                          getRaidDisplayName={getRaidDisplayName}
+                          setAliasPickerMember={setAliasPickerMember}
                           setSpecPickerMember={setSpecPickerMember}
                           removeFromRaid={removeFromRaid}
                           onSelectSlot={(index) => {
@@ -2166,6 +2318,9 @@ function handleDragEnd(event) {
     getMember={getMember}
     getClassColor={getClassColor}
     getSpecIcon={getSpecIcon}
+    setAliasPickerMember={setAliasPickerMember}
+    setAliasPickerSource={setAliasPickerSource}
+    getBenchDisplayName={getBenchDisplayName}
     removeFromBench={removeFromBench}
   />
 </div>
@@ -2194,6 +2349,10 @@ function handleDragEnd(event) {
                     removeFromSwitch={removeFromSwitch}
                     switchSpecs={switchSpecs}
                     setSwitchSpecs={setSwitchSpecs}
+                    getSwitchDisplayName={getSwitchDisplayName}
+                    setAliasPickerMember={setAliasPickerMember}
+                    setAliasPickerSource={setAliasPickerSource}
+                    setAliasPickerSwitchId={setAliasPickerSwitchId}
                   />
                 ))}
               </div>
@@ -2448,6 +2607,85 @@ function handleDragEnd(event) {
   </div>
 )}
 
+{aliasPickerMember && (
+  <div
+    className="modal-overlay"
+    onMouseDown={() => closeAliasPicker()}
+  >
+    <div
+      className="modal spec-picker-modal"
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <div className="modal-header">
+        <div>
+          <h2>{aliasPickerMember.name}</h2>
+          <p>Nom affiché pour ce raid</p>
+        </div>
+
+        <button
+          className="modal-close"
+          onClick={() => closeAliasPicker()}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="spec-picker-options">
+        {[
+  aliasPickerMember.name,
+  ...(aliasPickerMember.aliases || []),
+].map((name) => (
+  <button
+    key={name}
+    type="button"
+    className={
+  (
+    aliasPickerSource === "switch"
+      ? getSwitchDisplayName(
+          aliasPickerMember,
+          aliasPickerSwitchId
+        )
+      : aliasPickerSource === "bench"
+      ? getBenchDisplayName(aliasPickerMember)
+      : getRaidDisplayName(aliasPickerMember)
+  ) === name
+    ? "active"
+    : ""
+}
+onClick={() => {
+  if (aliasPickerSource === "switch") {
+  const key = `${aliasPickerSwitchId}-${aliasPickerMember.id}`;
+
+  setSwitchAliases((current) => ({
+    ...current,
+    [key]:
+      name === aliasPickerMember.name ? undefined : name,
+  }));
+} else if (aliasPickerSource === "bench") {
+  setBenchAliases((current) => ({
+    ...current,
+    [aliasPickerMember.id]:
+      name === aliasPickerMember.name ? undefined : name,
+  }));
+} else {
+  setRaidAliases((current) => ({
+    ...current,
+    [aliasPickerMember.id]:
+      name === aliasPickerMember.name ? undefined : name,
+  }));
+}
+
+  setAliasPickerMember(null);
+}}
+  >
+    <span>{name}</span>
+  </button>
+))}
+      </div>
+    </div>
+  </div>
+)}
+
 {editingMember && (
   <div
     className="modal-overlay"
@@ -2489,6 +2727,28 @@ function handleDragEnd(event) {
             }
           />
         </label>
+
+        <label>
+  Pseudos / sobriquets
+
+  <input
+    type="text"
+    placeholder="Ex. Naxouille, Gérard, Le Chauve"
+    value={(editMember.aliases || []).join(", ")}
+    onChange={(event) =>
+      setEditMember((current) => ({
+        ...current,
+        aliases: event.target.value
+          .split(",")
+          .map((alias) => alias.trim()),
+      }))
+    }
+  />
+
+  <small>
+    Sépare plusieurs pseudos par une virgule.
+  </small>
+</label>
 
         <label>
           Classe
@@ -2665,6 +2925,26 @@ function handleDragEnd(event) {
                     }
                   />
                 </label>
+
+                <label>
+  Pseudos / sobriquets
+  <input
+    type="text"
+    placeholder="Ex. Naxouille, Gérard, Le Chauve"
+    value={(newMember.aliases || []).join(", ")}
+    onChange={(event) =>
+      setNewMember((current) => ({
+        ...current,
+        aliases: event.target.value
+          .split(",")
+          .map((alias) => alias.trim()),
+      }))
+    }
+  />
+  <small>
+    Sépare plusieurs pseudos par une virgule.
+  </small>
+</label>
 
                 <label>
                   Classe
