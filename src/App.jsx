@@ -1064,6 +1064,9 @@ const shareId =
     setSwitches(data.switches || []);
     setRaidSpecs(data.raid_specs || {});
     setSwitchSpecs(data.switch_specs || {});
+    setRaidAliases(data.raid_aliases || {});
+    setBenchAliases(data.bench_aliases || {});
+    setSwitchAliases(data.switch_aliases || {});
   }
 
   loadSharedComposition();
@@ -1456,7 +1459,13 @@ async function createShareLink() {
 }
 
 function getRaidDisplayName(member) {
-  return raidAliases[member.id] || member.name;
+  const selectedAlias = raidAliases[member.id];
+
+  if (selectedAlias && member.aliases?.includes(selectedAlias)) {
+    return selectedAlias;
+  }
+
+  return member.name;
 }
 
 const [switchAliases, setSwitchAliases] = useState(() => {
@@ -1472,12 +1481,24 @@ useEffect(() => {
 }, [switchAliases]);
 
 function getBenchDisplayName(member) {
-  return benchAliases[member.id] || member.name;
+  const selectedAlias = benchAliases[member.id];
+
+  if (selectedAlias && member.aliases?.includes(selectedAlias)) {
+    return selectedAlias;
+  }
+
+  return member.name;
 }
 
 function getSwitchDisplayName(member, switchId) {
   const key = `${switchId}-${member.id}`;
-  return switchAliases[key] || member.name;
+  const selectedAlias = switchAliases[key];
+
+  if (selectedAlias && member.aliases?.includes(selectedAlias)) {
+    return selectedAlias;
+  }
+
+  return member.name;
 }
 
 function closeAliasPicker() {
