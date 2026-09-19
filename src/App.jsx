@@ -1337,7 +1337,7 @@ function updateSwitchBoss(switchId, bossName) {
   function getSpecIcon(member) {
   return SPEC_ICONS[member.className]?.[member.spec] || "";
   }
- async function exportCompositionAsPng() {
+async function exportCompositionAsPng(download = true) {
   if (!compositionExportRef.current) return;
 
   const element = compositionExportRef.current;
@@ -1401,6 +1401,7 @@ function updateSwitchBoss(switchId, bossName) {
 
   element.style.position = oldPosition;
 
+if (download) {
   const link = document.createElement("a");
   link.download = "totale-impro-composition.png";
   link.href = dataUrl;
@@ -1408,8 +1409,36 @@ function updateSwitchBoss(switchId, bossName) {
 
   setShareMenuOpen(false);
 }
+
+return dataUrl;
+}
+async function uploadRaidPreview(dataUrl, shareId) {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+
+  const filePath = `${shareId}.png`;
+
+  const { error } = await supabase.storage
+    .from("raid-previews")
+    .upload(filePath, blob, {
+    contentType: "image/png",
+  });
+
+  if (error) {
+    console.error("Erreur upload aperçu :", error);
+    throw error;
+  }
+
+  const { data } = supabase.storage
+    .from("raid-previews")
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+}
 async function createShareLink() {
   const shareId = crypto.randomUUID().slice(0, 8);
+  const previewDataUrl = await exportCompositionAsPng(false);
+const previewUrl = await uploadRaidPreview(previewDataUrl, shareId);
 
   const { error } = await supabase
     .from("raid_shares")
@@ -1423,6 +1452,7 @@ async function createShareLink() {
       raid_aliases: raidAliases,
       bench_aliases: benchAliases,
       switch_aliases: switchAliases,
+      preview_url: previewUrl,
     });
 
   if (error) {
