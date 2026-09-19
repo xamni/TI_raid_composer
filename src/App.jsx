@@ -383,9 +383,108 @@ function DraggableRosterMember({
   );
 }
 
+function DraggableClassButton({
+  wowClass,
+  selectedClass,
+  getClassColor,
+  onClick,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: `class-${wowClass.name}`,
+    data: {
+      source: "class",
+      className: wowClass.name,
+    },
+  });
+
+  const style = {
+    borderLeftColor: getClassColor(wowClass.name),
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <button
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={selectedClass === wowClass.name ? "active" : ""}
+      style={style}
+      onClick={onClick}
+    >
+      {wowClass.name}
+    </button>
+  );
+}
+
+function DraggableClassPlaceholder({
+  classPlaceholder,
+  slotIndex,
+  getClassColor,
+  onClick,
+  onRemove,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: `raid-class-${slotIndex}`,
+    data: {
+      source: "raid-class",
+      className: classPlaceholder.className,
+      slotIndex,
+    },
+  });
+
+  const style = {
+    color: getClassColor(classPlaceholder.className),
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <button
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className="raid-slot class-placeholder"
+      style={style}
+      onClick={onClick}
+    >
+      <strong>{classPlaceholder.className}</strong>
+
+<button
+  className="remove-player"
+  onPointerDown={(event) => event.stopPropagation()}
+  onClick={(event) => {
+    event.stopPropagation();
+    onRemove();
+  }}
+  title="Retirer du raid"
+>
+  ×
+</button>
+    </button>
+  );
+}
+
 function DroppableSlot({
   slotIndex,
   member,
+  classPlaceholder,
   getClassColor,
   getSpecIcon,
   getRaidSpec,
@@ -394,6 +493,7 @@ function DroppableSlot({
   setSpecPickerMember,
   removeFromRaid,
   onSelectSlot,
+  onRemoveClass,
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `slot-${slotIndex}`,
@@ -406,26 +506,34 @@ function DroppableSlot({
       className={`drop-zone ${isOver ? "drop-zone-over" : ""}`}
     >
       {member ? (
-        <DraggablePlayer
-          member={member}
-          slotIndex={slotIndex}
-          getClassColor={getClassColor}
-          getSpecIcon={getSpecIcon}
-          getRaidSpec={getRaidSpec}
-          getRaidDisplayName={getRaidDisplayName}
-          setAliasPickerMember={setAliasPickerMember}
-          setSpecPickerMember={setSpecPickerMember}
-          removeFromRaid={removeFromRaid}
-        />
-      ) : (
-        <button
-          className="raid-slot"
-          onClick={() => onSelectSlot(slotIndex)}
-        >
-          <span className="slot-plus">+</span>
-          <span>Choisir un joueur</span>
-        </button>
-      )}
+  <DraggablePlayer
+    member={member}
+    slotIndex={slotIndex}
+    getClassColor={getClassColor}
+    getSpecIcon={getSpecIcon}
+    getRaidSpec={getRaidSpec}
+    getRaidDisplayName={getRaidDisplayName}
+    setAliasPickerMember={setAliasPickerMember}
+    setSpecPickerMember={setSpecPickerMember}
+    removeFromRaid={removeFromRaid}
+  />
+) : classPlaceholder ? (
+  <DraggableClassPlaceholder
+    classPlaceholder={classPlaceholder}
+    slotIndex={slotIndex}
+    getClassColor={getClassColor}
+    onClick={() => onSelectSlot(slotIndex)}
+    onRemove={() => onRemoveClass(slotIndex)}
+  />
+) : (
+  <button
+    className="raid-slot"
+    onClick={() => onSelectSlot(slotIndex)}
+  >
+    <span className="slot-plus">+</span>
+    <span>Choisir un joueur</span>
+  </button>
+)}
     </div>
   );
 }
@@ -1021,16 +1129,27 @@ const [aliasPickerSwitchId, setAliasPickerSwitchId] = useState(null);
   (memberId) => memberId && getMember(memberId)
   ).length;
 
-  const availableMembers = useMemo(() => {
-    return members.filter((member) => {
-      const alreadyInRaid = raidMemberIds.includes(member.id);
-      const matchesSearch = member.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
+const availableMembers = useMemo(() => {
+  const selectedClassPlaceholder =
+    selectedSlot !== null &&
+    raidSlots[selectedSlot]?.type === "class-placeholder"
+      ? raidSlots[selectedSlot]
+      : null;
 
-      return !alreadyInRaid && matchesSearch;
-    });
-  }, [members, raidMemberIds, search]);
+  return members.filter((member) => {
+    const alreadyInRaid = raidMemberIds.includes(member.id);
+
+    const matchesSearch = member.name
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+    const matchesClass =
+      !selectedClassPlaceholder ||
+      member.className === selectedClassPlaceholder.className;
+
+    return !alreadyInRaid && matchesSearch && matchesClass;
+  });
+}, [members, raidMemberIds, search, selectedSlot, raidSlots]);
   const sortedRosterMembers = members
   .filter((member) => !member.mainId)
   .flatMap((main) => [
@@ -1202,6 +1321,31 @@ async function saveEditedMember(event) {
   }
 
   setEditingMember(null);
+}
+function addClassToRaid(className) {
+  setRaidSlots((current) => {
+    const firstEmptySlot = current.findIndex((slot) => slot === null);
+
+    if (firstEmptySlot === -1) {
+      return current;
+    }
+
+    const copy = [...current];
+
+    copy[firstEmptySlot] = {
+      type: "class-placeholder",
+      className,
+    };
+
+    return copy;
+  });
+}
+function removeClassFromRaid(slotIndex) {
+  setRaidSlots((current) => {
+    const copy = [...current];
+    copy[slotIndex] = null;
+    return copy;
+  });
 }
   function chooseMember(memberId) {
     if (selectedSlot === null) return;
@@ -1552,6 +1696,7 @@ function handleDragEnd(event) {
 
   const source = active.data.current?.source;
   const memberId = active.data.current?.memberId;
+  const className = active.data.current?.className;
   const fromSlot = active.data.current?.slotIndex;
   const sourceSwitchId = active.data.current?.switchId;
 
@@ -1559,6 +1704,54 @@ function handleDragEnd(event) {
   const targetType = over.data.current?.targetType;
   const targetMemberId = over.data.current?.targetMemberId;
   const targetSwitchId = over.data.current?.switchId;
+
+  // ===================================
+// CLASSE -> RAID
+// place un placeholder dans le slot visé
+// ===================================
+if (
+  source === "class" &&
+  className &&
+  typeof toSlot === "number"
+) {
+  setRaidSlots((current) => {
+    const copy = [...current];
+
+    copy[toSlot] = {
+      type: "class-placeholder",
+      className,
+    };
+
+    return copy;
+  });
+
+  return;
+}
+
+// ===================================
+// CLASSE DEJA DANS LE RAID -> RAID
+// échange de slots
+// ===================================
+if (
+  source === "raid-class" &&
+  typeof fromSlot === "number" &&
+  typeof toSlot === "number" &&
+  fromSlot !== toSlot
+) {
+  setRaidSlots((current) => {
+    const copy = [...current];
+
+    const draggedClass = copy[fromSlot];
+    const targetContent = copy[toSlot];
+
+    copy[toSlot] = draggedClass;
+    copy[fromSlot] = targetContent;
+
+    return copy;
+  });
+
+  return;
+}
 
   if (!memberId) return;
 
@@ -2241,19 +2434,17 @@ function handleDragEnd(event) {
 
     <div className="class-buttons">
       {CLASSES.map((wowClass) => (
-        <button
-          key={wowClass.name}
-          className={
-            selectedClass === wowClass.name ? "active" : ""
-          }
-          style={{
-            borderLeftColor: getClassColor(wowClass.name),
-          }}
-          onClick={() => setSelectedClass(wowClass.name)}
-        >
-          {wowClass.name}
-        </button>
-      ))}
+  <DraggableClassButton
+    key={wowClass.name}
+    wowClass={wowClass}
+    selectedClass={selectedClass}
+    getClassColor={getClassColor}
+    onClick={() => {
+      setSelectedClass(wowClass.name);
+      addClassToRaid(wowClass.name);
+    }}
+  />
+))}
     </div>
 
     <div className="class-members">
@@ -2320,6 +2511,12 @@ function handleDragEnd(event) {
                           key={slotIndex}
                           slotIndex={slotIndex}
                           member={member}
+                          classPlaceholder={
+                            raidSlots[slotIndex]?.type === "class-placeholder"
+                            ? raidSlots[slotIndex]
+                            : null
+                            }
+                          onRemoveClass={removeClassFromRaid} 
                           getClassColor={getClassColor}
                           getSpecIcon={getSpecIcon}
                           getRaidSpec={getRaidSpec}

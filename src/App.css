@@ -278,6 +278,7 @@ input {
 
 .delete-member,
 .remove-player,
+.class-placeholder-remove,
 .modal-close {
   border: none;
   background: transparent;
@@ -337,6 +338,7 @@ input {
   flex: 0 0 auto;
   padding: 5px;
   font-size: 17px;
+  margin-right: 8px;
 }
 
 .modal-overlay {
@@ -1316,4 +1318,15 @@ gap: 8px;
 .raid-count-actions .clear-composition-button:hover {
   background: rgba(201, 168, 76, 0.08) !important;
   border-color: rgba(201, 168, 76, 0.55) !important;
+}
+
+.class-placeholder {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.class-placeholder strong {
+  flex: 1;
+  text-align: left;
 }
