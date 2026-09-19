@@ -235,6 +235,7 @@ function DraggablePlayer({
   alt={`${member.className} ${getRaidSpec(member)}`}
 />
       <div className="slot-player-info">
+
        <strong
   style={{
     color: getClassColor(member.className),
@@ -254,9 +255,7 @@ function DraggablePlayer({
   }
 >
   {getRaidDisplayName(member)}
-</strong>
-        <span>{getRaidSpec(member)}</span>
-        {member.availableSpecs?.length > 0 && (
+   {member.availableSpecs?.length > 0 && (
   <button
     className="spec-switch"
     onClick={(event) => {
@@ -268,6 +267,8 @@ function DraggablePlayer({
     ⇄
   </button>
 )}
+</strong>
+        <span>{getRaidSpec(member)}</span>
       </div>
 
       <button
@@ -683,10 +684,7 @@ const currentSwitchSpec =
   }
 >
   {getSwitchDisplayName(member, switchId)}
-</strong>
-
-      <span>{currentSwitchSpec}</span>
-      {member.availableSpecs?.length > 0 && (
+{member.availableSpecs?.length > 0 && (
   <button
     className="spec-switch"
     onClick={(event) => {
@@ -714,6 +712,8 @@ const currentSwitchSpec =
     ⇄
   </button>
 )}
+</strong>
+      <span>{currentSwitchSpec}</span>
     </div>
 
     <button

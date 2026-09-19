@@ -1041,19 +1041,33 @@ gap: 8px;
   flex: 0 0 auto;
 }
 
+.raid-member-name-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+}
+
+.raid-member-name-row .spec-switch {
+  margin-top: 0;
+}
+
 .spec-switch {
   width: auto;
-  min-width: 28px;
-  padding: 2px 6px;
-  margin-left: 0;
-  margin-top: 3px;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 4px;
+  margin-left: 6px;
+  margin-top: 0;
   align-self: flex-start;
   border: 1px solid #66512d;
   border-radius: 3px;
   background: #17130d;
   color: #d6b66f;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 16px;
 }
 
 .spec-switch:hover {
