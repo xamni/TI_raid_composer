@@ -1,8 +1,13 @@
 {
+  "functions": {
+    "api/share.js": {
+      "includeFiles": "dist/**"
+    }
+  },
   "rewrites": [
     {
-      "source": "/share/:path*",
-      "destination": "/index.html"
+      "source": "/share/:id",
+      "destination": "/api/share?id=:id"
     }
   ]
 }

@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
+import fs from "node:fs";
+import path from "node:path";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -22,29 +24,25 @@ export default async function handler(req, res) {
     return res.status(404).send("Share not found");
   }
 
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  try {
+    const indexPath = path.join(process.cwd(), "dist", "index.html");
+    let html = fs.readFileSync(indexPath, "utf8");
 
-return res.status(200).send(`
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
+    const metaTags = `
+      <meta property="og:title" content="Totale Impro - Raid Composition">
+      <meta property="og:description" content="Composition de raid partagée">
+      <meta property="og:type" content="website">
+      <meta property="og:image" content="${data.preview_url}">
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:image" content="${data.preview_url}">
+    `;
 
-  <title>Totale Impro - Raid Composition</title>
+    html = html.replace("</head>", `${metaTags}</head>`);
 
-  <meta property="og:title" content="Totale Impro - Raid Composition">
-  <meta property="og:description" content="Composition de raid partagée">
-  <meta property="og:type" content="website">
-  <meta property="og:image" content="${data.preview_url}">
-
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="${data.preview_url}">
-</head>
-
-<body>
-  <h1>Totale Impro - Raid Composition</h1>
-  <img src="${data.preview_url}" alt="Composition du raid">
-</body>
-</html>
-`);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(200).send(html);
+  } catch (error) {
+    console.error("Erreur chargement index.html :", error);
+    return res.status(500).send("Unable to load app");
+  }
 }
