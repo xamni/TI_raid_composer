@@ -114,6 +114,24 @@ const SPEC_ICONS = {
   },
 };
 
+function memberMatchesSearch(member, search) {
+  const query = search.trim().toLowerCase();
+
+  if (!query) return true;
+
+  const searchableValues = [
+    member.name,
+    member.className,
+    member.spec,
+    ...(member.availableSpecs || []),
+    ...(member.aliases || []),
+  ];
+
+  return searchableValues.some((value) =>
+    String(value || "").toLowerCase().includes(query)
+  );
+}
+
 const GROUP_BUFFS = [
   {
     key: "bloodlust",
@@ -464,7 +482,10 @@ function DraggableClassPlaceholder({
       style={style}
       onClick={onClick}
     >
-      <strong>{classPlaceholder.className}</strong>
+      <div className="class-placeholder-info">
+  <strong>{classPlaceholder.className}</strong>
+  <span>Non assigné</span>
+</div>
 
 <button
   className="remove-player"
@@ -1139,9 +1160,7 @@ const availableMembers = useMemo(() => {
   return members.filter((member) => {
     const alreadyInRaid = raidMemberIds.includes(member.id);
 
-    const matchesSearch = member.name
-      .toLowerCase()
-      .includes(search.toLowerCase());
+    const matchesSearch = memberMatchesSearch(member, search);
 
     const matchesClass =
       !selectedClassPlaceholder ||
@@ -2631,7 +2650,7 @@ if (
       <input
         className="search"
         type="text"
-        placeholder="Rechercher un membre..."
+        placeholder="Nom, alias, classe ou spé..."
         value={search}
         onChange={(event) => setSearch(event.target.value)}
       />
@@ -2645,20 +2664,16 @@ if (
           members
   .filter((member) => !member.mainId)
   .filter((main) => {
-    const searchLower = search.toLowerCase();
+  const mainMatches = memberMatchesSearch(main, search);
 
-    const mainMatches = main.name
-      .toLowerCase()
-      .includes(searchLower);
+  const altMatches = members.some(
+    (alt) =>
+      alt.mainId === main.id &&
+      memberMatchesSearch(alt, search)
+  );
 
-    const altMatches = members.some(
-      (alt) =>
-        alt.mainId === main.id &&
-        alt.name.toLowerCase().includes(searchLower)
-    );
-
-    return mainMatches || altMatches;
-  })
+  return mainMatches || altMatches;
+})
   .map((main) => (
              <div key={main.id} className="roster-management-member">
   <img
@@ -2981,7 +2996,7 @@ onClick={() => {
 
   <input
     type="text"
-    placeholder="Ex. Naxouille, Gérard, Le Chauve"
+    placeholder="Ex. airfryer, Kouin, Le Chauve"
     value={(editMember.aliases || []).join(", ")}
     onChange={(event) =>
       setEditMember((current) => ({
@@ -3333,7 +3348,11 @@ onClick={() => {
             >
               <div className="modal-header">
                 <div>
-                  <h2>Choisir un membre</h2>
+                  <h2>
+                  {raidSlots[selectedSlot]?.type === "class-placeholder"
+                  ? `Choisir un ${raidSlots[selectedSlot].className}`
+                  : "Choisir un membre"}
+                  </h2>
                   <p>
                     Slot {selectedSlot + 1} • Clique simplement sur le joueur.
                   </p>
@@ -3354,7 +3373,7 @@ onClick={() => {
                 autoFocus
                 className="search picker-search"
                 type="text"
-                placeholder="Rechercher un membre..."
+                placeholder="Nom, alias, classe ou spé..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />

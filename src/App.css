@@ -1327,7 +1327,22 @@ gap: 8px;
   width: 100%;
 }
 
-.class-placeholder strong {
+.class-placeholder-info {
+  min-width: 0;
+  display: flex;
   flex: 1;
+  flex-direction: column;
   text-align: left;
+}
+
+.class-placeholder-info strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.class-placeholder-info span {
+  color: #776f61;
+  font-size: 10px;
 }
