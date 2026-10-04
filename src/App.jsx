@@ -1420,8 +1420,8 @@ if (unlinkError) {
   }
 
   function addSwitch() {
-  if (switches.length >= 5) {
-    alert("Maximum 5 fenêtres Switch.");
+  if (switches.length >= 10) {
+    alert("Maximum 10 fenêtres Switch.");
     return;
   }
 
@@ -2577,7 +2577,7 @@ if (
               <div className="switches-title">
                 <span>Switch</span>
 
-                {switches.length < 5 && (
+                {switches.length < 10 && (
                   <button onClick={addSwitch}>
                     + Ajouter un switch
                   </button>
