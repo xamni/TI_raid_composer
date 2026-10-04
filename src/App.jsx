@@ -944,6 +944,177 @@ function SwitchPanel({
     </div>
   );
 }
+
+function HistoryComposition({ entry, getClassColor }) {
+  const composition = entry?.composition;
+
+  if (!composition) return null;
+
+  const archivedMembers = composition.members || [];
+  const archivedRaidSlots = composition.raidSlots || [];
+  const archivedRaidSpecs = composition.raidSpecs || {};
+  const archivedRaidAliases = composition.raidAliases || {};
+  const archivedBenchMembers = composition.benchMembers || [];
+const archivedBenchAliases = composition.benchAliases || {};
+
+function getArchivedBenchDisplayName(member) {
+  const selectedAlias = archivedBenchAliases[member.id];
+
+  if (
+    selectedAlias &&
+    member.aliases?.includes(selectedAlias)
+  ) {
+    return selectedAlias;
+  }
+
+  return member.name;
+}
+
+  function getArchivedMember(memberId) {
+    return archivedMembers.find((member) => member.id === memberId);
+  }
+
+  function getArchivedSpec(member) {
+    return archivedRaidSpecs[member.id] || member.spec;
+  }
+
+  function getArchivedDisplayName(member) {
+    const selectedAlias = archivedRaidAliases[member.id];
+
+    if (
+      selectedAlias &&
+      member.aliases?.includes(selectedAlias)
+    ) {
+      return selectedAlias;
+    }
+
+    return member.name;
+  }
+
+  function getArchivedSpecIcon(member) {
+    const spec = getArchivedSpec(member);
+
+    return SPEC_ICONS[member.className]?.[spec] || "";
+  }
+
+  return (
+    <div className="history-raid-panel">
+      {GROUPS.map((groupNumber) => {
+        const groupStart = (groupNumber - 1) * 5;
+        const groupSlots = archivedRaidSlots.slice(
+          groupStart,
+          groupStart + 5
+        );
+
+        const groupCount = groupSlots.filter(
+          (memberId) => memberId && getArchivedMember(memberId)
+        ).length;
+
+        return (
+          <div
+            className="raid-group history-raid-group"
+            key={groupNumber}
+          >
+            <div className="group-header">
+              <span>Groupe {groupNumber}</span>
+              <span>{groupCount} / 5</span>
+            </div>
+
+            <div className="slots">
+              {groupSlots.map((memberId, localIndex) => {
+                const member = memberId
+                  ? getArchivedMember(memberId)
+                  : null;
+
+                return (
+                  <div
+                    className="raid-slot history-raid-slot"
+                    key={localIndex}
+                  >
+                    {member ? (
+                      <>
+                        <img
+                          className="spec-icon"
+                          src={getArchivedSpecIcon(member)}
+                          alt={getArchivedSpec(member)}
+                        />
+
+                        <div className="slot-player-info">
+                          <strong
+                            style={{
+                              color: getClassColor(member.className),
+                                  }}
+                          >
+                            <strong
+                              style={{
+                            color: getClassColor(member.className),
+                                }}
+                              >
+                              {getArchivedDisplayName(member)}
+                          </strong>
+                          </strong>
+
+                          <span>{getArchivedSpec(member)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="history-empty-slot">
+                        Emplacement vide
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      <div className="history-bench">
+  <h3>BENCH</h3>
+
+  <div className="history-bench-list">
+    {archivedBenchMembers.length === 0 ? (
+      <span className="history-empty-slot">
+        Aucun joueur sur le bench
+      </span>
+    ) : (
+      archivedBenchMembers.map((memberId) => {
+        const member = getArchivedMember(memberId);
+
+        if (!member) return null;
+
+        return (
+          <div
+            className="raid-slot history-raid-slot"
+            key={memberId}
+          >
+            <img
+              className="spec-icon"
+              src={getArchivedSpecIcon(member)}
+              alt={member.spec}
+            />
+
+            <div className="slot-player-info">
+              <strong
+                style={{
+                  color: getClassColor(member.className),
+                }}
+              >
+                {getArchivedBenchDisplayName(member)}
+              </strong>
+
+              <span>{member.spec}</span>
+            </div>
+          </div>
+        );
+      })
+    )}
+  </div>
+</div>
+    </div>
+  );
+}
+
 function App() {
   const [members, setMembers] = useState([]);
 
@@ -957,6 +1128,10 @@ const [editMember, setEditMember] = useState({
   mainId: "",
   availableSpecs: [],
 });
+
+const [selectedHistoryEntry, setSelectedHistoryEntry] = useState(null);
+
+const [raidHistory, setRaidHistory] = useState([]);
 
   const [selectedClass, setSelectedClass] = useState("Warrior");
 
@@ -1020,6 +1195,8 @@ const [aliasPickerSwitchId, setAliasPickerSwitchId] = useState(null);
 
   const compositionExportRef = useRef(null);
 
+  const [compositionTitle, setCompositionTitle] = useState("");
+
   const [raidSlots, setRaidSlots] = useState(() => {
     const saved = localStorage.getItem("wowRaidSlots");
     return saved
@@ -1048,6 +1225,21 @@ const [aliasPickerSwitchId, setAliasPickerSwitchId] = useState(null);
   );
   }, [switches]);
 
+async function loadRaidHistory() {
+  const { data, error } = await supabase
+    .from("raid_history")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  console.log("RAID HISTORY :", data, error);
+
+  if (error) {
+    console.error("Erreur chargement historique :", error);
+    return;
+  }
+
+  setRaidHistory(data || []);
+}
   useEffect(() => {
   async function loadMembers() {
     const { data, error } = await supabase
@@ -1649,6 +1841,42 @@ const previewUrl = await uploadRaidPreview(previewDataUrl, shareId);
 
   function getRaidSpec(member) {
   return raidSpecs[member.id] || member.spec;
+}
+
+async function saveToHistory() {
+  const title = compositionTitle.trim();
+
+  if (!title) {
+    alert("Ajoute un titre à la composition avant de l'enregistrer dans l'historique.");
+    return;
+  }
+
+  const composition = {
+    raidSlots,
+    benchMembers,
+    switches,
+    raidSpecs,
+    switchSpecs,
+    raidAliases,
+    benchAliases,
+    switchAliases,
+    members,
+  };
+
+  const { error } = await supabase
+    .from("raid_history")
+    .insert({
+      title,
+      composition,
+    });
+
+  if (error) {
+    console.error("Erreur sauvegarde historique :", error);
+    alert("Impossible d'ajouter cette composition à l'historique.");
+    return;
+  }
+
+  alert("Composition ajoutée à l'historique !");
 }
 
 function getRaidDisplayName(member) {
@@ -2393,6 +2621,13 @@ if (
     </div>
   </div>
 
+<button
+  className="share-button"
+  onClick={saveToHistory}
+>
+  Ajouter à l'historique
+</button>
+
   <div className="share-menu">
   <button
     className="share-button"
@@ -2429,6 +2664,17 @@ if (
   >
     Roster
   </button>
+
+  <button
+  className={activeView === "history" ? "active" : ""}
+  onClick={() => {
+  setActiveView("history");
+  loadRaidHistory();
+}}
+>
+  Historique
+</button>
+
   <div className="raid-count-actions">
   <button
   className="raid-count clear-composition-button"
@@ -2499,6 +2745,15 @@ if (
   className="composition-export"
   ref={compositionExportRef}
 >
+  <div className="composition-title">
+  <input
+    type="text"
+    value={compositionTitle}
+    onChange={(event) => setCompositionTitle(event.target.value)}
+    placeholder="Titre de la composition..."
+    maxLength={80}
+  />
+</div>
           <section className="raid-panel">
             {GROUPS.map((groupNumber) => {
               const groupStart = (groupNumber - 1) * 5;
@@ -2798,6 +3053,100 @@ if (
 ))
 )}
       </div>
+    </section>
+  </main>
+
+)}
+
+{activeView === "history" && (
+  <main className="history-page">
+    <section className="history-panel">
+      <div className="panel-title">
+        <div>
+          <h2>Historique</h2>
+          <span className="roster-count">
+            {raidHistory.length} composition
+            {raidHistory.length > 1 ? "s" : ""}
+          </span>
+        </div>
+      </div>
+
+     {selectedHistoryEntry ? (
+  <div className="history-detail">
+    <button
+      type="button"
+      className="history-back"
+      onClick={() => setSelectedHistoryEntry(null)}
+    >
+      ← Retour à l'historique
+    </button>
+
+    <div className="history-detail-header">
+      <div>
+        <h2>{selectedHistoryEntry.title}</h2>
+
+        <p>
+          {new Date(
+            selectedHistoryEntry.created_at
+          ).toLocaleDateString("fr-FR")}
+        </p>
+      </div>
+
+      <div className="history-detail-actions">
+        <button type="button">
+          Ajouter une note
+        </button>
+
+        <button type="button">
+          Ajouter des infos
+        </button>
+
+        <button type="button">
+          Envoyer dans le Composer
+        </button>
+      </div>
+    </div>
+
+    <div className="history-composition">
+      <HistoryComposition
+  entry={selectedHistoryEntry}
+  getClassColor={getClassColor}
+/>
+    </div>
+  </div>
+) : (
+  <div className="history-list">
+    {raidHistory.length === 0 ? (
+      <div className="empty-roster">
+        Aucune composition enregistrée.
+      </div>
+    ) : (
+      raidHistory.map((entry) => (
+        <button
+          key={entry.id}
+          className="history-row"
+          onClick={() => setSelectedHistoryEntry(entry)}
+          type="button"
+        >
+          <span>
+            {new Date(entry.created_at).toLocaleDateString("fr-FR")}
+          </span>
+
+          <strong>{entry.title}</strong>
+
+          <span>{entry.raid_name || "—"}</span>
+
+          <span>
+            {entry.bosses_killed != null &&
+            entry.bosses_total != null
+              ? `${entry.bosses_killed} / ${entry.bosses_total}`
+              : "—"}
+          </span>
+        </button>
+      ))
+    )}
+  </div>
+)}
     </section>
   </main>
 )}
