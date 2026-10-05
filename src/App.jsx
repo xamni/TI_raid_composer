@@ -132,6 +132,18 @@ function memberMatchesSearch(member, search) {
   );
 }
 
+const RAIDS = [
+  { name: "Karazhan", bosses: 11 },
+  { name: "Gruul's Lair", bosses: 2 },
+  { name: "Magtheridon's Lair", bosses: 1 },
+  { name: "Serpentshrine Cavern", bosses: 6 },
+  { name: "Tempest Keep", bosses: 4 },
+  { name: "Hyjal Summit", bosses: 5 },
+  { name: "Black Temple", bosses: 9 },
+  { name: "Zul'Aman", bosses: 6 },
+  { name: "Sunwell Plateau", bosses: 6 },
+];
+
 const GROUP_BUFFS = [
   {
     key: "bloodlust",
@@ -945,6 +957,72 @@ function SwitchPanel({
   );
 }
 
+function HistoryNote({ text }) {
+  if (!text) return null;
+
+  function formatInline(line) {
+    const parts = line.split(/(\*\*.*?\*\*|__.*?__)/g);
+
+    return parts.map((part, index) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={index}>
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+
+      if (part.startsWith("__") && part.endsWith("__")) {
+        return (
+          <u key={index}>
+            {part.slice(2, -2)}
+          </u>
+        );
+      }
+
+      return part;
+    });
+  }
+
+  const lines = text.split("\n");
+
+  return (
+    <div className="history-note-content">
+      {lines.map((line, index) => {
+        if (line.startsWith("- ")) {
+          return (
+            <div className="history-note-bullet" key={index}>
+              <span>•</span>
+              <div>{formatInline(line.slice(2))}</div>
+            </div>
+          );
+        }
+
+        if (/^\d+\.\s/.test(line)) {
+          const match = line.match(/^(\d+\.)\s(.*)$/);
+
+          return (
+            <div className="history-note-bullet" key={index}>
+              <span>{match[1]}</span>
+              <div>{formatInline(match[2])}</div>
+            </div>
+          );
+        }
+
+        if (!line.trim()) {
+          return <div className="history-note-space" key={index} />;
+        }
+
+        return (
+          <div className="history-note-line" key={index}>
+            {formatInline(line)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function HistoryComposition({ entry, getClassColor }) {
   const composition = entry?.composition;
 
@@ -956,6 +1034,9 @@ function HistoryComposition({ entry, getClassColor }) {
   const archivedRaidAliases = composition.raidAliases || {};
   const archivedBenchMembers = composition.benchMembers || [];
 const archivedBenchAliases = composition.benchAliases || {};
+const archivedSwitches = composition.switches || [];
+const archivedSwitchSpecs = composition.switchSpecs || {};
+const archivedSwitchAliases = composition.switchAliases || {};
 
 function getArchivedBenchDisplayName(member) {
   const selectedAlias = archivedBenchAliases[member.id];
@@ -968,6 +1049,47 @@ function getArchivedBenchDisplayName(member) {
   }
 
   return member.name;
+}
+
+function getArchivedSwitchSpec(member, switchId) {
+  const key = `${switchId}-${member.id}`;
+
+  return archivedSwitchSpecs[key] || member.spec;
+}
+
+function getArchivedSwitchDisplayName(member, switchId) {
+  const key = `${switchId}-${member.id}`;
+  const selectedAlias = archivedSwitchAliases[key];
+
+  if (
+    selectedAlias &&
+    member.aliases?.includes(selectedAlias)
+  ) {
+    return selectedAlias;
+  }
+
+  return member.name;
+}
+
+function getArchivedGroupBuffs(groupMemberIds) {
+  const groupMembers = groupMemberIds
+    .map((memberId) => getArchivedMember(memberId))
+    .filter(Boolean);
+
+  return GROUP_BUFFS.filter((buff) =>
+    groupMembers.some((member) =>
+      buff.condition({
+        ...member,
+        spec: getArchivedSpec(member),
+      })
+    )
+  );
+}
+
+function getArchivedSwitchSpecIcon(member, switchId) {
+  const spec = getArchivedSwitchSpec(member, switchId);
+
+  return SPEC_ICONS[member.className]?.[spec] || "";
 }
 
   function getArchivedMember(memberId) {
@@ -1066,6 +1188,25 @@ function getArchivedBenchDisplayName(member) {
                 );
               })}
             </div>
+            <div className="buffs">
+  {getArchivedGroupBuffs(groupSlots).length === 0 ? (
+    <span className="buff-placeholder">
+      Aucun buff détecté
+    </span>
+  ) : (
+    <div className="buff-list">
+      {getArchivedGroupBuffs(groupSlots).map((buff) => (
+        <div
+          className="buff-item"
+          key={buff.key}
+          title={buff.label}
+        >
+          <img src={buff.icon} alt={buff.label} />
+        </div>
+      ))}
+    </div>
+  )}
+</div>
           </div>
         );
       })}
@@ -1111,6 +1252,83 @@ function getArchivedBenchDisplayName(member) {
     )}
   </div>
 </div>
+<div className="history-switches">
+  <h3>SWITCH</h3>
+
+  {archivedSwitches.length === 0 ? (
+    <span className="history-empty-slot">
+      Aucun switch enregistré
+    </span>
+  ) : (
+    <div className="switches-grid">
+      {archivedSwitches.map((switchItem) => (
+        <div
+          className="switch-panel"
+          key={switchItem.id}
+        >
+          <div className="switch-header">
+            <strong>
+              {switchItem.bossName || "Boss non renseigné"}
+            </strong>
+          </div>
+
+          <div className="switch-members">
+            {(switchItem.members || []).map((memberId) => {
+              const member = getArchivedMember(memberId);
+
+              if (!member) return null;
+
+              return (
+                <div
+                  className="raid-slot history-raid-slot"
+                  key={memberId}
+                >
+                  <img
+                    className="spec-icon"
+                    src={getArchivedSwitchSpecIcon(
+                      member,
+                      switchItem.id
+                    )}
+                    alt={getArchivedSwitchSpec(
+                      member,
+                      switchItem.id
+                    )}
+                  />
+
+                  <div className="slot-player-info">
+                    <strong
+                      style={{
+                        color: getClassColor(member.className),
+                      }}
+                    >
+                      {getArchivedSwitchDisplayName(
+                        member,
+                        switchItem.id
+                      )}
+                    </strong>
+
+                    <span>
+                      {getArchivedSwitchSpec(
+                        member,
+                        switchItem.id
+                      )}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+
+            {(switchItem.members || []).length === 0 && (
+              <span className="history-empty-slot">
+                Aucun joueur
+              </span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
     </div>
   );
 }
@@ -1130,6 +1348,9 @@ const [editMember, setEditMember] = useState({
 });
 
 const [selectedHistoryEntry, setSelectedHistoryEntry] = useState(null);
+
+const [editingHistoryNote, setEditingHistoryNote] = useState(false);
+const [historyNote, setHistoryNote] = useState("");
 
 const [raidHistory, setRaidHistory] = useState([]);
 
@@ -1224,6 +1445,121 @@ const [aliasPickerSwitchId, setAliasPickerSwitchId] = useState(null);
     JSON.stringify(switches)
   );
   }, [switches]);
+
+  function formatHistoryNoteList(type) {
+  const textarea = document.querySelector(".history-note-editor textarea");
+
+  if (!textarea) return;
+
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+
+  const lineStart = historyNote.lastIndexOf("\n", start - 1) + 1;
+
+  const nextLineBreak = historyNote.indexOf("\n", end);
+  const lineEnd =
+    nextLineBreak === -1 ? historyNote.length : nextLineBreak;
+
+  const selectedBlock = historyNote.slice(lineStart, lineEnd);
+  const lines = selectedBlock.split("\n");
+
+  const formattedLines = lines.map((line, index) => {
+    // Retire un éventuel ancien marqueur de liste
+    const cleanLine = line
+      .replace(/^- /, "")
+      .replace(/^\d+\.\s/, "");
+
+    if (type === "bullet") {
+      return `- ${cleanLine}`;
+    }
+
+    return `${index + 1}. ${cleanLine}`;
+  });
+
+  const formattedBlock = formattedLines.join("\n");
+
+  const newText =
+    historyNote.slice(0, lineStart) +
+    formattedBlock +
+    historyNote.slice(lineEnd);
+
+  setHistoryNote(newText);
+
+  setTimeout(() => {
+    textarea.focus();
+    textarea.setSelectionRange(
+      lineStart,
+      lineStart + formattedBlock.length
+    );
+  }, 0);
+}
+
+  function formatHistoryNote(prefix, suffix = prefix) {
+  const textarea = document.querySelector(".history-note-editor textarea");
+
+  if (!textarea) return;
+
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selectedText = historyNote.slice(start, end);
+
+  const newText =
+    historyNote.slice(0, start) +
+    prefix +
+    selectedText +
+    suffix +
+    historyNote.slice(end);
+
+  setHistoryNote(newText);
+
+  setTimeout(() => {
+    textarea.focus();
+
+    if (selectedText) {
+      textarea.setSelectionRange(
+        start + prefix.length,
+        end + prefix.length
+      );
+    } else {
+      textarea.setSelectionRange(
+        start + prefix.length,
+        start + prefix.length
+      );
+    }
+  }, 0);
+}
+
+  async function saveHistoryNote() {
+  if (!selectedHistoryEntry) return;
+
+  const { error } = await supabase
+    .from("raid_history")
+    .update({
+      note: historyNote.trim() || null,
+    })
+    .eq("id", selectedHistoryEntry.id);
+
+  if (error) {
+    console.error("Erreur sauvegarde note :", error);
+    alert("Impossible d'enregistrer la note.");
+    return;
+  }
+
+  const updatedEntry = {
+    ...selectedHistoryEntry,
+    note: historyNote.trim() || null,
+  };
+
+  setSelectedHistoryEntry(updatedEntry);
+
+  setRaidHistory((current) =>
+    current.map((entry) =>
+      entry.id === updatedEntry.id ? updatedEntry : entry
+    )
+  );
+
+  setEditingHistoryNote(false);
+}
 
 async function loadRaidHistory() {
   const { data, error } = await supabase
@@ -3093,9 +3429,15 @@ if (
       </div>
 
       <div className="history-detail-actions">
-        <button type="button">
-          Ajouter une note
-        </button>
+        <button
+  type="button"
+  onClick={() => {
+    setHistoryNote(selectedHistoryEntry.note || "");
+    setEditingHistoryNote(true);
+  }}
+>
+  {selectedHistoryEntry.note ? "Modifier la note" : "Ajouter une note"}
+</button>
 
         <button type="button">
           Ajouter des infos
@@ -3106,6 +3448,76 @@ if (
         </button>
       </div>
     </div>
+{editingHistoryNote && (
+  <div className="history-note-editor">
+    <div className="history-note-toolbar">
+  <button
+    type="button"
+    title="Gras"
+    onClick={() => formatHistoryNote("**")}
+  >
+    <strong>B</strong>
+  </button>
+
+  <button
+    type="button"
+    title="Souligné"
+    onClick={() => formatHistoryNote("__")}
+  >
+    <u>U</u>
+  </button>
+
+  <button
+    type="button"
+    title="Liste à puces"
+    onClick={() => formatHistoryNoteList("bullet")}
+  >
+    • Liste
+  </button>
+
+  <button
+    type="button"
+    title="Liste numérotée"
+    onClick={() => formatHistoryNoteList("number")}
+  >
+    1. Liste
+  </button>
+</div>
+    <textarea
+      value={historyNote}
+      onChange={(event) => setHistoryNote(event.target.value)}
+      placeholder="Ajouter une note sur cette composition..."
+      rows={4}
+    />
+
+    <div className="history-note-actions">
+      <button
+        type="button"
+        onClick={saveHistoryNote}
+      >
+        Enregistrer
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          setEditingHistoryNote(false);
+          setHistoryNote("");
+        }}
+      >
+        Annuler
+      </button>
+    </div>
+  </div>
+)}
+
+{!editingHistoryNote && selectedHistoryEntry.note && (
+  <div className="history-note">
+  <strong className="history-note-title">Note</strong>
+
+  <HistoryNote text={selectedHistoryEntry.note} />
+</div>
+)}
 
     <div className="history-composition">
       <HistoryComposition
