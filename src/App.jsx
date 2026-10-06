@@ -224,8 +224,12 @@ function DraggablePlayer({
   getSpecIcon,
   getRaidSpec,
   getRaidDisplayName,
+  getLinkedCharacters,
   setAliasPickerMember,
   setSpecPickerMember,
+  setSpecPickerPosition,
+  setCharacterPickerMember,
+  setCharacterPickerPosition,
   removeFromRaid,
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -289,14 +293,70 @@ function DraggablePlayer({
   <button
     className="spec-switch"
     onClick={(event) => {
-      event.stopPropagation();
-      setSpecPickerMember(member);
-    }}
+  event.stopPropagation();
+
+  const popupWidth = 260;
+  const popupHeight = 220;
+  const margin = 12;
+
+  let x = event.clientX + 8;
+  let y = event.clientY + 8;
+
+  if (x + popupWidth > window.innerWidth - margin) {
+    x = event.clientX - popupWidth - 8;
+  }
+
+  if (y + popupHeight > window.innerHeight - margin) {
+    y = event.clientY - popupHeight - 8;
+  }
+
+  setSpecPickerPosition({
+    x: Math.max(margin, x),
+    y: Math.max(margin, y),
+  });
+
+  setSpecPickerMember(member);
+}}
     title="Changer la spécialisation pour ce raid"
   >
     ⇄
   </button>
 )}
+
+{getLinkedCharacters(member).length > 1 && (
+  <button
+    className="character-switch"
+    onClick={(event) => {
+  event.stopPropagation();
+
+  const popupWidth = 320;
+  const popupHeight = Math.min(500, window.innerHeight - 24);
+  const margin = 12;
+
+  let x = event.clientX + 8;
+  let y = event.clientY + 8;
+
+  if (x + popupWidth > window.innerWidth - margin) {
+    x = event.clientX - popupWidth - 8;
+  }
+
+  if (y + popupHeight > window.innerHeight - margin) {
+    y = window.innerHeight - popupHeight - margin;
+  }
+
+  setCharacterPickerPosition({
+    x: Math.max(margin, x),
+    y: Math.max(margin, y),
+  });
+
+  setCharacterPickerMember(member);
+}}
+    title="Changer de personnage"
+  >
+    👤
+  </button>
+)}
+
 </strong>
         <span>{getRaidSpec(member)}</span>
       </div>
@@ -522,8 +582,12 @@ function DroppableSlot({
   getSpecIcon,
   getRaidSpec,
   getRaidDisplayName,
+  getLinkedCharacters,
   setAliasPickerMember,
   setSpecPickerMember,
+  setSpecPickerPosition,
+  setCharacterPickerMember,
+  setCharacterPickerPosition,
   removeFromRaid,
   onSelectSlot,
   onRemoveClass,
@@ -546,8 +610,12 @@ function DroppableSlot({
     getSpecIcon={getSpecIcon}
     getRaidSpec={getRaidSpec}
     getRaidDisplayName={getRaidDisplayName}
+    getLinkedCharacters={getLinkedCharacters}
     setAliasPickerMember={setAliasPickerMember}
     setSpecPickerMember={setSpecPickerMember}
+    setSpecPickerPosition={setSpecPickerPosition}
+    setCharacterPickerMember={setCharacterPickerMember}
+    setCharacterPickerPosition={setCharacterPickerPosition}
     removeFromRaid={removeFromRaid}
   />
 ) : classPlaceholder ? (
@@ -1391,6 +1459,12 @@ const [switchSpecs, setSwitchSpecs] = useState(() => {
   localStorage.setItem("wowRaidSpecs", JSON.stringify(raidSpecs));
 }, [raidSpecs]);
 
+const [specPickerPosition, setSpecPickerPosition] = useState({
+  x: 0,
+  y: 0,
+});
+
+const [characterPickerMember, setCharacterPickerMember] = useState(null);
 
   useEffect(() => {
   localStorage.setItem(
@@ -1398,6 +1472,11 @@ const [switchSpecs, setSwitchSpecs] = useState(() => {
     JSON.stringify(switchSpecs)
   );
 }, [switchSpecs]);
+
+const [characterPickerPosition, setCharacterPickerPosition] = useState({
+  x: 0,
+  y: 0,
+});
 
 const [raidAliases, setRaidAliases] = useState(() => {
   const saved = localStorage.getItem("wowRaidAliases");
@@ -2322,6 +2401,58 @@ async function saveToHistory() {
 setHistoryRaidDate("");
 }
 
+function getLinkedCharacters(member) {
+  if (!member) return [];
+
+  const mainId = member.mainId || member.id;
+
+  return members.filter((candidate) => {
+    const candidateMainId = candidate.mainId || candidate.id;
+    return candidateMainId === mainId;
+  });
+}
+
+function replaceRaidCharacter(newCharacter) {
+  if (!characterPickerMember || !newCharacter) return;
+
+  if (newCharacter.id === characterPickerMember.id) {
+    setCharacterPickerMember(null);
+    return;
+  }
+
+  const alreadyInRaid = raidSlots.includes(newCharacter.id);
+  const alreadyOnBench = benchMembers.includes(newCharacter.id);
+
+  if (alreadyInRaid || alreadyOnBench) {
+    alert(
+      `${newCharacter.name} est déjà ${
+        alreadyInRaid ? "dans le raid" : "sur le bench"
+      }.`
+    );
+    return;
+  }
+
+  setRaidSlots((currentSlots) =>
+    currentSlots.map((slot) =>
+      slot === characterPickerMember.id
+        ? newCharacter.id
+        : slot
+    )
+  );
+setRaidSpecs((current) => {
+  const updated = { ...current };
+  delete updated[characterPickerMember.id];
+  return updated;
+});
+
+setRaidAliases((current) => {
+  const updated = { ...current };
+  delete updated[characterPickerMember.id];
+  return updated;
+});
+  setCharacterPickerMember(null);
+}
+
 function getRaidDisplayName(member) {
   const selectedAlias = raidAliases[member.id];
 
@@ -3241,8 +3372,12 @@ if (
                           getSpecIcon={getSpecIcon}
                           getRaidSpec={getRaidSpec}
                           getRaidDisplayName={getRaidDisplayName}
+                          getLinkedCharacters={getLinkedCharacters}
                           setAliasPickerMember={setAliasPickerMember}
                           setSpecPickerMember={setSpecPickerMember}
+                          setSpecPickerPosition={setSpecPickerPosition}
+                          setCharacterPickerMember={setCharacterPickerMember}
+                          setCharacterPickerPosition={setCharacterPickerPosition}
                           removeFromRaid={removeFromRaid}
                           onSelectSlot={(index) => {
                             setSelectedSlot(index);
@@ -3804,43 +3939,41 @@ if (
         <footer className="app-footer">
   Crafted for Totale Impro by Xamni • 2026
 </footer>
-
 {specPickerMember && (
-  <div
-    className="modal-overlay"
-    onMouseDown={() => setSpecPickerMember(null)}
-  >
+  <>
     <div
-      className="modal spec-picker-modal"
+      className="spec-picker-backdrop"
+      onMouseDown={() => setSpecPickerMember(null)}
+    />
+
+    <div
+      className="spec-picker-popup"
+      style={{
+        left: specPickerPosition.x,
+        top: specPickerPosition.y,
+      }}
       onMouseDown={(event) => event.stopPropagation()}
     >
-      <div className="modal-header">
-        <div>
-          <h2>{specPickerMember.name}</h2>
-          <p>Spécialisation pour ce raid</p>
-        </div>
-
-        <button
-          className="modal-close"
-          onClick={() => setSpecPickerMember(null)}
-        >
-          ×
-        </button>
+      <div className="spec-picker-title">
+        Spécialisation de {specPickerMember.name}
       </div>
 
-      <div className="spec-picker-options">
+      <div className="spec-picker-popup-list">
         {[
-  ...new Set([
-    specPickerMember.spec,
-    ...(specPickerMember.availableSpecs || []),
-  ]),
-].map(
-          (spec) => (
+          ...new Set([
+            specPickerMember.spec,
+            ...(specPickerMember.availableSpecs || []),
+          ]),
+        ].map((spec) => {
+          const isActive = getRaidSpec(specPickerMember) === spec;
+
+          return (
             <button
               key={spec}
-              className={
-  getRaidSpec(specPickerMember) === spec ? "active" : ""
-}
+              type="button"
+              className={`spec-picker-popup-item ${
+                isActive ? "active" : ""
+              }`}
               onClick={() => {
                 setRaidSpecs((current) => ({
                   ...current,
@@ -3850,24 +3983,26 @@ if (
                 setSpecPickerMember(null);
               }}
             >
-              <>
-  <img
-    className="spec-picker-icon"
-    src={getSpecIcon({
-      ...specPickerMember,
-      spec,
-    })}
-    alt={spec}
-  />
+              <img
+                className="spec-picker-icon"
+                src={getSpecIcon({
+                  ...specPickerMember,
+                  spec,
+                })}
+                alt={spec}
+              />
 
-  <span>{spec}</span>
-</>
+              <span>{spec}</span>
+
+              {isActive && (
+                <span className="spec-picker-current">✓</span>
+              )}
             </button>
-          )
-        )}
+          );
+        })}
       </div>
     </div>
-  </div>
+  </>
 )}
 
 {aliasPickerMember && (
@@ -4146,6 +4281,69 @@ onClick={() => {
       </form>
     </div>
   </div>
+)}
+
+{characterPickerMember && (
+  <>
+    <div
+      className="character-picker-backdrop"
+      onMouseDown={() => setCharacterPickerMember(null)}
+    />
+
+    <div
+      className="character-picker-popup"
+      style={{
+        left: characterPickerPosition.x,
+        top: characterPickerPosition.y,
+      }}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <div className="character-picker-title">
+        Personnages du joueur
+      </div>
+
+      <div className="character-picker-list">
+        {getLinkedCharacters(characterPickerMember).map((character) => (
+          <button
+            key={character.id}
+            type="button"
+            className="character-picker-item"
+            onClick={() => replaceRaidCharacter(character)}
+          >
+            <img
+              className="spec-icon"
+              src={getSpecIcon(character)}
+              alt={character.spec}
+            />
+
+            <div className="character-picker-info">
+              <div className="character-picker-name-row">
+                <strong
+                  style={{
+                    color: getClassColor(character.className),
+                  }}
+                >
+                  {character.name}
+                </strong>
+
+                <span>{character.className}</span>
+
+                {character.id === characterPickerMember.id && (
+                  <span className="character-picker-current">✓</span>
+                )}
+              </div>
+
+              <span className="character-picker-specs">
+                {character.spec}
+                {character.availableSpecs?.length > 0 &&
+                  ` • Alt : ${character.availableSpecs.join(", ")}`}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  </>
 )}
 {historySaveOpen && (
   <div
