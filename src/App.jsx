@@ -1179,11 +1179,22 @@ function getArchivedSwitchSpecIcon(member, switchId) {
                           <span>{getArchivedSpec(member)}</span>
                         </div>
                       </>
-                    ) : (
-                      <span className="history-empty-slot">
-                        Emplacement vide
-                      </span>
-                    )}
+                    ) : memberId && typeof memberId === "object" ? (
+  <div className="slot-player-info">
+    <strong
+      style={{
+        color: getClassColor(memberId.className),
+      }}
+    >
+      {memberId.className}
+    </strong>
+    <span>Non assigné</span>
+  </div>
+) : (
+  <span className="history-empty-slot">
+    Emplacement vide
+  </span>
+)}
                   </div>
                 );
               })}
@@ -1337,6 +1348,14 @@ function App() {
   const [members, setMembers] = useState([]);
 
   const [editingMember, setEditingMember] = useState(null);
+
+  const [historySaveOpen, setHistorySaveOpen] = useState(false);
+const [historyRaidDate, setHistoryRaidDate] = useState("");
+
+  const [editingHistoryInfo, setEditingHistoryInfo] = useState(false);
+const [historyRaidName, setHistoryRaidName] = useState("");
+const [historyBossesKilled, setHistoryBossesKilled] = useState(0);
+const [historyEditRaidDate, setHistoryEditRaidDate] = useState("");
 
 const [editMember, setEditMember] = useState({
   name: "",
@@ -1529,6 +1548,90 @@ const [aliasPickerSwitchId, setAliasPickerSwitchId] = useState(null);
   }, 0);
 }
 
+async function saveHistoryInfo() {
+  if (!selectedHistoryEntry || !historyRaidName) return;
+
+  const selectedRaid = RAIDS.find(
+    (raid) => raid.name === historyRaidName
+  );
+
+  if (!selectedRaid) return;
+
+  const { error } = await supabase
+    .from("raid_history")
+    .update({
+      raid_name: historyRaidName,
+      bosses_killed: historyBossesKilled,
+      bosses_total: selectedRaid.bosses,
+      raid_date: historyEditRaidDate || null,
+    })
+    .eq("id", selectedHistoryEntry.id);
+
+  if (error) {
+    console.error("Erreur sauvegarde infos raid :", error);
+    alert("Impossible d'enregistrer les informations.");
+    return;
+  }
+
+  const updatedEntry = {
+    ...selectedHistoryEntry,
+    raid_name: historyRaidName,
+    bosses_killed: historyBossesKilled,
+    bosses_total: selectedRaid.bosses,
+    raid_date: historyEditRaidDate || null,
+  };
+
+  setSelectedHistoryEntry(updatedEntry);
+
+  setRaidHistory((current) =>
+    current.map((entry) =>
+      entry.id === updatedEntry.id ? updatedEntry : entry
+    )
+  );
+
+  setEditingHistoryInfo(false);
+}
+function sendHistoryToComposer() {
+  if (!selectedHistoryEntry?.composition) return;
+
+  const composition = selectedHistoryEntry.composition;
+
+  const copiedRaidSlots = Array.from({ length: 25 }, (_, index) => {
+    const slot = composition.raidSlots?.[index] ?? null;
+
+    return slot && typeof slot === "object"
+      ? { ...slot }
+      : slot;
+  });
+
+  const copiedSwitches = (composition.switches || []).map((switchItem) => ({
+    ...switchItem,
+    members: [...(switchItem.members || [])],
+  }));
+
+  setRaidSlots(copiedRaidSlots);
+  setBenchMembers([...(composition.benchMembers || [])]);
+  setSwitches(copiedSwitches);
+
+  setRaidSpecs({ ...(composition.raidSpecs || {}) });
+  setSwitchSpecs({ ...(composition.switchSpecs || {}) });
+
+  setRaidAliases({ ...(composition.raidAliases || {}) });
+  setBenchAliases({ ...(composition.benchAliases || {}) });
+  setSwitchAliases({ ...(composition.switchAliases || {}) });
+
+  setCompositionTitle(
+    selectedHistoryEntry.title
+      ? `${selectedHistoryEntry.title} - copie`
+      : ""
+  );
+
+  setEditingHistoryNote(false);
+  setEditingHistoryInfo(false);
+  setSelectedHistoryEntry(null);
+  setActiveView("composition");
+}
+
   async function saveHistoryNote() {
   if (!selectedHistoryEntry) return;
 
@@ -1565,7 +1668,8 @@ async function loadRaidHistory() {
   const { data, error } = await supabase
     .from("raid_history")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("raid_date", { ascending: false })
+.order("created_at", { ascending: false });
 
   console.log("RAID HISTORY :", data, error);
 
@@ -2200,11 +2304,12 @@ async function saveToHistory() {
   };
 
   const { error } = await supabase
-    .from("raid_history")
-    .insert({
-      title,
-      composition,
-    });
+  .from("raid_history")
+  .insert({
+    title,
+    raid_date: historyRaidDate || null,
+    composition,
+  });
 
   if (error) {
     console.error("Erreur sauvegarde historique :", error);
@@ -2213,6 +2318,8 @@ async function saveToHistory() {
   }
 
   alert("Composition ajoutée à l'historique !");
+  setHistorySaveOpen(false);
+setHistoryRaidDate("");
 }
 
 function getRaidDisplayName(member) {
@@ -2957,14 +3064,17 @@ if (
     </div>
   </div>
 
-<button
+  <div className="share-menu">
+    <button
   className="share-button"
-  onClick={saveToHistory}
+  onClick={() => {
+  const today = new Date().toLocaleDateString("en-CA");
+  setHistoryRaidDate(today);
+  setHistorySaveOpen(true);
+}}
 >
   Ajouter à l'historique
 </button>
-
-  <div className="share-menu">
   <button
     className="share-button"
     onClick={() => setShareMenuOpen((current) => !current)}
@@ -3420,12 +3530,32 @@ if (
     <div className="history-detail-header">
       <div>
         <h2>{selectedHistoryEntry.title}</h2>
+        {selectedHistoryEntry.raid_name && (
+  <div className="history-raid-info">
+    <span>{selectedHistoryEntry.raid_name}</span>
+
+    {selectedHistoryEntry.bosses_killed != null &&
+      selectedHistoryEntry.bosses_total != null && (
+        <>
+          <span className="history-raid-separator">•</span>
+          <strong>
+            {selectedHistoryEntry.bosses_killed} /{" "}
+            {selectedHistoryEntry.bosses_total}
+          </strong>
+        </>
+      )}
+  </div>
+)}
 
         <p>
-          {new Date(
-            selectedHistoryEntry.created_at
-          ).toLocaleDateString("fr-FR")}
-        </p>
+  {selectedHistoryEntry.raid_date
+    ? new Date(
+        `${selectedHistoryEntry.raid_date}T00:00:00`
+      ).toLocaleDateString("fr-FR")
+    : new Date(
+        selectedHistoryEntry.created_at
+      ).toLocaleDateString("fr-FR")}
+</p>
       </div>
 
       <div className="history-detail-actions">
@@ -3439,15 +3569,122 @@ if (
   {selectedHistoryEntry.note ? "Modifier la note" : "Ajouter une note"}
 </button>
 
-        <button type="button">
-          Ajouter des infos
-        </button>
+        <button
+  type="button"
+  onClick={() => {
+    setHistoryRaidName(selectedHistoryEntry.raid_name || "");
+    setHistoryBossesKilled(
+      selectedHistoryEntry.bosses_killed ?? 0
+    );
+    setHistoryEditRaidDate(
+  selectedHistoryEntry.raid_date ||
+    new Date(selectedHistoryEntry.created_at)
+      .toLocaleDateString("en-CA")
+);
+    setEditingHistoryInfo(true);
+  }}
+>
+  {selectedHistoryEntry.raid_name
+    ? "Modifier les infos"
+    : "Ajouter des infos"}
+</button>
 
-        <button type="button">
-          Envoyer dans le Composer
-        </button>
+        <button
+  type="button"
+  onClick={sendHistoryToComposer}
+>
+  Envoyer dans le Composer
+</button>
       </div>
     </div>
+
+    {editingHistoryInfo && (
+  <div className="history-info-editor">
+    <div className="history-info-field">
+      <label>Raid</label>
+
+      <select
+        value={historyRaidName}
+        onChange={(event) => {
+          setHistoryRaidName(event.target.value);
+          setHistoryBossesKilled(0);
+        }}
+      >
+        <option value="">Choisir un raid...</option>
+
+        {RAIDS.map((raid) => (
+          <option key={raid.name} value={raid.name}>
+            {raid.name}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <div className="history-info-field">
+      <label>Boss tombés</label>
+
+      <div className="history-boss-progress">
+        <input
+          type="number"
+          min="0"
+          max={
+            RAIDS.find((raid) => raid.name === historyRaidName)
+              ?.bosses || 0
+          }
+          value={historyBossesKilled}
+          onChange={(event) => {
+            const total =
+              RAIDS.find(
+                (raid) => raid.name === historyRaidName
+              )?.bosses || 0;
+
+            const value = Math.max(
+              0,
+              Math.min(Number(event.target.value), total)
+            );
+
+            setHistoryBossesKilled(value);
+          }}
+          disabled={!historyRaidName}
+        />
+
+        <span>
+          /{" "}
+          {RAIDS.find((raid) => raid.name === historyRaidName)
+            ?.bosses || "—"}
+        </span>
+      </div>
+    </div>
+    <div className="history-info-field">
+  <label>Date du raid</label>
+
+  <input
+    type="date"
+    value={historyEditRaidDate}
+    onChange={(event) =>
+      setHistoryEditRaidDate(event.target.value)
+    }
+  />
+</div>
+
+    <div className="history-info-actions">
+      <button
+  type="button"
+  onClick={saveHistoryInfo}
+>
+  Enregistrer
+</button>
+
+      <button
+        type="button"
+        onClick={() => setEditingHistoryInfo(false)}
+      >
+        Annuler
+      </button>
+    </div>
+  </div>
+)}
+
 {editingHistoryNote && (
   <div className="history-note-editor">
     <div className="history-note-toolbar">
@@ -3541,8 +3778,10 @@ if (
           type="button"
         >
           <span>
-            {new Date(entry.created_at).toLocaleDateString("fr-FR")}
-          </span>
+  {entry.raid_date
+    ? new Date(`${entry.raid_date}T00:00:00`).toLocaleDateString("fr-FR")
+    : new Date(entry.created_at).toLocaleDateString("fr-FR")}
+</span>
 
           <strong>{entry.title}</strong>
 
@@ -3908,6 +4147,73 @@ onClick={() => {
     </div>
   </div>
 )}
+{historySaveOpen && (
+  <div
+    className="modal-overlay"
+    onMouseDown={() => setHistorySaveOpen(false)}
+  >
+    <div
+      className="modal"
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <div className="modal-header">
+        <div>
+          <h2>Ajouter à l'historique</h2>
+          <p>Choisis la date réelle du raid.</p>
+        </div>
+
+        <button
+          className="modal-close"
+          onClick={() => setHistorySaveOpen(false)}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="history-save-form">
+        <label>
+          Titre de la composition
+          <input
+            type="text"
+            value={compositionTitle}
+            onChange={(event) =>
+              setCompositionTitle(event.target.value)
+            }
+            placeholder="Titre de la composition..."
+          />
+        </label>
+
+        <label>
+          Date du raid
+          <input
+            type="date"
+            value={historyRaidDate}
+            onChange={(event) =>
+              setHistoryRaidDate(event.target.value)
+            }
+          />
+        </label>
+
+        <div className="history-save-actions">
+          <button
+            type="button"
+            onClick={saveToHistory}
+          >
+            Enregistrer
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setHistorySaveOpen(false)}
+          >
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
         {showAddMember && (
           <div
             className="modal-overlay"

@@ -1199,6 +1199,8 @@ gap: 8px;
 
 .share-menu {
   position: relative;
+  display: flex;
+  gap: 8px;
 }
 
 .share-dropdown {
@@ -1625,4 +1627,89 @@ gap: 8px;
   display: grid;
   grid-template-columns: 28px 1fr;
   gap: 4px;
+}
+
+.history-info-editor {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  margin-bottom: 18px;
+  padding: 14px 16px;
+
+  border: 1px solid #3f321c;
+  border-radius: 4px;
+  background: #12110e;
+}
+
+.history-info-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-info-field label {
+  color: #d6b66f;
+  font-weight: 700;
+}
+
+.history-info-field select,
+.history-info-field input {
+  padding: 8px 10px;
+
+  border: 1px solid #66512d;
+  border-radius: 4px;
+  background: #0e0c08;
+
+  color: #d6d0c5;
+  font: inherit;
+}
+
+.history-boss-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-boss-progress input {
+  width: 65px;
+}
+
+.history-boss-progress span {
+  color: #d6b66f;
+  font-weight: 700;
+}
+
+.history-info-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.history-info-actions button {
+  padding: 8px 12px;
+  border: 1px solid #66512d;
+  border-radius: 4px;
+  background: #211b10;
+  color: #d6b66f;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.history-raid-info {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 3px 0 5px;
+
+  color: #a99a7c;
+  font-size: 14px;
+}
+
+.history-raid-info strong {
+  color: #d6b66f;
+}
+
+.history-raid-separator {
+  color: #66512d;
 }
