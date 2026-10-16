@@ -114,22 +114,33 @@ const SPEC_ICONS = {
   },
 };
 
-function memberMatchesSearch(member, search) {
+function memberMatchesSearch(member, search, members = []) {
   const query = search.trim().toLowerCase();
-
   if (!query) return true;
 
-  const searchableValues = [
-    member.name,
-    member.className,
-    member.spec,
-    ...(member.availableSpecs || []),
-    ...(member.aliases || []),
-  ];
+  function matches(candidate) {
+    const searchableValues = [
+      candidate.name,
+      candidate.className,
+      candidate.spec,
+      ...(candidate.availableSpecs || []),
+      ...(candidate.aliases || []),
+    ];
 
-  return searchableValues.some((value) =>
-    String(value || "").toLowerCase().includes(query)
-  );
+    return searchableValues.some((value) =>
+      String(value || "").toLowerCase().includes(query)
+    );
+  }
+
+  if (matches(member)) return true;
+
+  const mainId = member.mainId || member.id;
+
+  return members.some((candidate) => {
+    const candidateMainId = candidate.mainId || candidate.id;
+
+    return candidateMainId === mainId && matches(candidate);
+  });
 }
 
 const RAIDS = [
@@ -1917,7 +1928,7 @@ const availableMembers = useMemo(() => {
   return members.filter((member) => {
     const alreadyInRaid = raidMemberIds.includes(member.id);
 
-    const matchesSearch = memberMatchesSearch(member, search);
+    const matchesSearch = memberMatchesSearch(member, search, members);
 
     const matchesClass =
       !selectedClassPlaceholder ||
