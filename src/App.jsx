@@ -825,7 +825,10 @@ function DraggableSwitchMember({
   getSwitchDisplayName,
   setAliasPickerMember,
   setAliasPickerSource,
-  setAliasPickerSwitchId,
+    setAliasPickerSwitchId,
+  getLinkedCharacters,
+  setCharacterPickerMember,
+  setCharacterPickerPosition,
 }) {
   const switchSpecKey = `${switchId}-${member.id}`;
 
@@ -893,6 +896,43 @@ const currentSwitchSpec =
   }
 >
   {getSwitchDisplayName(member, switchId)}
+  {getLinkedCharacters(member).length > 1 && (
+  <button
+    type="button"
+    className="character-switch"
+    title="Changer de personnage dans ce switch"
+    onClick={(event) => {
+      event.stopPropagation();
+
+      const popupWidth = 320;
+      const popupHeight = Math.min(500, window.innerHeight - 24);
+      const margin = 12;
+
+      let x = event.clientX + 8;
+      let y = event.clientY + 8;
+
+      if (x + popupWidth > window.innerWidth - margin) {
+        x = event.clientX - popupWidth - 8;
+      }
+
+      if (y + popupHeight > window.innerHeight - margin) {
+        y = window.innerHeight - popupHeight - margin;
+      }
+
+      setCharacterPickerPosition({
+        x: Math.max(margin, x),
+        y: Math.max(margin, y),
+      });
+
+      setCharacterPickerMember({
+        ...member,
+        sourceSwitchId: switchId,
+      });
+    }}
+  >
+    👤
+  </button>
+)}
 {member.availableSpecs?.length > 0 && (
   <button
     className="spec-switch"
@@ -952,7 +992,10 @@ function SwitchPanel({
   getSwitchDisplayName,
   setAliasPickerMember,
   setAliasPickerSource,
-  setAliasPickerSwitchId,
+    setAliasPickerSwitchId,
+  getLinkedCharacters,
+  setCharacterPickerMember,
+  setCharacterPickerPosition,
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `switch-zone-${switchData.id}`,
@@ -1015,8 +1058,11 @@ function SwitchPanel({
                 getSwitchDisplayName={getSwitchDisplayName}
                 setAliasPickerMember={setAliasPickerMember}
                 setAliasPickerSource={setAliasPickerSource}
-                setAliasPickerSwitchId={setAliasPickerSwitchId}
-              />
+               setAliasPickerSwitchId={setAliasPickerSwitchId}
+getLinkedCharacters={getLinkedCharacters}
+setCharacterPickerMember={setCharacterPickerMember}
+setCharacterPickerPosition={setCharacterPickerPosition}
+/>
             );
           })
         )}
@@ -2415,11 +2461,62 @@ function getLinkedCharacters(member) {
 function replaceRaidCharacter(newCharacter) {
   if (!characterPickerMember || !newCharacter) return;
 
-  if (newCharacter.id === characterPickerMember.id) {
+  const oldMemberId = characterPickerMember.id;
+  const switchId = characterPickerMember.sourceSwitchId;
+
+  if (newCharacter.id === oldMemberId) {
     setCharacterPickerMember(null);
     return;
   }
 
+  // Remplacement uniquement dans un Switch
+  if (switchId != null) {
+    const targetSwitch = switches.find(
+      (item) => item.id === switchId
+    );
+
+    if (!targetSwitch) {
+      setCharacterPickerMember(null);
+      return;
+    }
+
+    if (targetSwitch.members.includes(newCharacter.id)) {
+      alert(`${newCharacter.name} est déjà dans ce Switch.`);
+      return;
+    }
+
+    setSwitches((current) =>
+      current.map((item) =>
+        item.id === switchId
+          ? {
+              ...item,
+              members: item.members.map((id) =>
+                id === oldMemberId ? newCharacter.id : id
+              ),
+            }
+          : item
+      )
+    );
+
+    const oldKey = `${switchId}-${oldMemberId}`;
+
+    setSwitchSpecs((current) => {
+      const updated = { ...current };
+      delete updated[oldKey];
+      return updated;
+    });
+
+    setSwitchAliases((current) => {
+      const updated = { ...current };
+      delete updated[oldKey];
+      return updated;
+    });
+
+    setCharacterPickerMember(null);
+    return;
+  }
+
+  // Remplacement dans le raid principal
   const alreadyInRaid = raidSlots.includes(newCharacter.id);
   const alreadyOnBench = benchMembers.includes(newCharacter.id);
 
@@ -2434,22 +2531,22 @@ function replaceRaidCharacter(newCharacter) {
 
   setRaidSlots((currentSlots) =>
     currentSlots.map((slot) =>
-      slot === characterPickerMember.id
-        ? newCharacter.id
-        : slot
+      slot === oldMemberId ? newCharacter.id : slot
     )
   );
-setRaidSpecs((current) => {
-  const updated = { ...current };
-  delete updated[characterPickerMember.id];
-  return updated;
-});
 
-setRaidAliases((current) => {
-  const updated = { ...current };
-  delete updated[characterPickerMember.id];
-  return updated;
-});
+  setRaidSpecs((current) => {
+    const updated = { ...current };
+    delete updated[oldMemberId];
+    return updated;
+  });
+
+  setRaidAliases((current) => {
+    const updated = { ...current };
+    delete updated[oldMemberId];
+    return updated;
+  });
+
   setCharacterPickerMember(null);
 }
 
@@ -3456,7 +3553,10 @@ if (
                     setAliasPickerMember={setAliasPickerMember}
                     setAliasPickerSource={setAliasPickerSource}
                     setAliasPickerSwitchId={setAliasPickerSwitchId}
-                  />
+getLinkedCharacters={getLinkedCharacters}
+setCharacterPickerMember={setCharacterPickerMember}
+setCharacterPickerPosition={setCharacterPickerPosition}
+/>
                 ))}
               </div>
             </div>
