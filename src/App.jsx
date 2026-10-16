@@ -1934,7 +1934,7 @@ const availableMembers = useMemo(() => {
       !selectedClassPlaceholder ||
       member.className === selectedClassPlaceholder.className;
 
-    return !alreadyInRaid && matchesSearch && matchesClass;
+    return matchesSearch && matchesClass;
   });
 }, [members, raidMemberIds, search, selectedSlot, raidSlots]);
   const sortedRosterMembers = members
@@ -4761,11 +4761,12 @@ onClick={() => {
                   </div>
                 ) : (
                   availableMembers.map((member) => (
-                    <button
-                      className="picker-member"
-                      key={member.id}
-                      onClick={() => chooseMember(member.id)}
-                    >
+                   <button
+  className="picker-member"
+  key={member.id}
+  disabled={raidSlots.includes(member.id)}
+  onClick={() => chooseMember(member.id)}
+>
                       <img
   className="spec-icon"
   src={getSpecIcon(member)}
@@ -4787,7 +4788,13 @@ onClick={() => {
 
                         <small>{member.role}</small>
                       </div>
-                    </button>
+
+{raidSlots.includes(member.id) && (
+  <span className="picker-member-status">
+    Déjà dans le raid
+  </span>
+)}
+</button>
                   ))
                 )}
               </div>

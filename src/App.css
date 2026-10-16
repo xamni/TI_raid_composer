@@ -1882,3 +1882,23 @@ overflow-y: auto;
   color: #d6b66f;
   font-weight: 700;
 }
+
+.picker-member:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(70%);
+}
+
+.picker-member:disabled:hover {
+  background: #0e0c08;
+  transform: none;
+}
+
+.picker-member-status {
+  margin-left: auto;
+  padding: 0 10px;
+  color: #9a8f7b;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
