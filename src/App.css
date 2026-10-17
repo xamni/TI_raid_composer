@@ -1902,3 +1902,86 @@ overflow-y: auto;
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* Récapitulatif des rôles du raid */
+
+.raid-role-summary {
+  margin: 12px 0 18px;
+  padding: 12px 16px;
+  border: 1px solid #66512d;
+  border-radius: 5px;
+  background: #14110d;
+}
+
+.raid-role-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.raid-role-summary-header strong {
+  color: #d6b66f;
+  font-size: 14px;
+}
+
+.raid-role-summary-header span {
+  color: #a99a7c;
+  font-size: 12px;
+}
+
+.raid-role-summary-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.raid-role-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #302719;
+  border-radius: 4px;
+  background: #211a11;
+}
+
+.raid-role-stat span {
+  color: #b8ad98;
+  font-size: 12px;
+}
+
+.raid-role-stat strong {
+  color: #d6b66f;
+  font-size: 18px;
+}
+
+@media (max-width: 700px) {
+  .raid-role-summary-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.raid-role-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+.raid-role-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  border: 1px solid #a18b65;
+  border-radius: 50%;
+  background: #17130e;
+  color: #e2d6c1;
+  font-size: 13px;
+  line-height: 1;
+}

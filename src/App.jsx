@@ -37,6 +37,54 @@ const SPECS = {
   Druid: ["Balance", "Feral", "Restoration"],
 };
 
+const SPEC_ROLES = {
+  Warrior: {
+    Protection: "Tank",
+    Arms: "Melee DPS",
+    Fury: "Melee DPS",
+  },
+  Paladin: {
+    Holy: "Healer",
+    Protection: "Tank",
+    Retribution: "Melee DPS",
+  },
+  Hunter: {
+    "Beast Mastery": "Ranged DPS",
+    Marksmanship: "Ranged DPS",
+    Survival: "Ranged DPS",
+  },
+  Rogue: {
+    Assassination: "Melee DPS",
+    Combat: "Melee DPS",
+    Subtlety: "Melee DPS",
+  },
+  Priest: {
+    Discipline: "Healer",
+    Holy: "Healer",
+    Shadow: "Ranged DPS",
+  },
+  Shaman: {
+    Elemental: "Ranged DPS",
+    Enhancement: "Melee DPS",
+    Restoration: "Healer",
+  },
+  Mage: {
+    Arcane: "Ranged DPS",
+    Fire: "Ranged DPS",
+    Frost: "Ranged DPS",
+  },
+  Warlock: {
+    Affliction: "Ranged DPS",
+    Demonology: "Ranged DPS",
+    Destruction: "Ranged DPS",
+  },
+  Druid: {
+    Balance: "Ranged DPS",
+    Feral: "Tank",
+    Restoration: "Healer",
+  },
+};
+
 const SPEC_ICONS = {
   Warrior: {
     Protection: "https://wow.zamimg.com/images/wow/icons/large/ability_warrior_defensivestance.jpg",
@@ -1918,6 +1966,27 @@ async function loadRaidHistory() {
   (memberId) => memberId && getMember(memberId)
   ).length;
 
+  const raidRoleCounts = {
+  Tank: 0,
+  Healer: 0,
+  "Ranged DPS": 0,
+  "Melee DPS": 0,
+};
+
+raidSlots.forEach((memberId) => {
+  const member = getMember(memberId);
+  if (!member) return;
+
+  const selectedSpec = raidSpecs[member.id] || member.spec;
+
+  const role =
+    SPEC_ROLES[member.className]?.[selectedSpec] || member.role;
+
+  if (raidRoleCounts[role] !== undefined) {
+    raidRoleCounts[role] += 1;
+  }
+});
+
 const availableMembers = useMemo(() => {
   const selectedClassPlaceholder =
     selectedSlot !== null &&
@@ -3438,6 +3507,47 @@ if (
     placeholder="Titre de la composition..."
     maxLength={80}
   />
+</div>
+
+<div className="raid-role-summary">
+  <div className="raid-role-summary-header">
+    <strong>Répartition des rôles</strong>
+    <span>{raidCount} / 25 joueurs</span>
+  </div>
+
+  <div className="raid-role-summary-list">
+    <div className="raid-role-stat">
+  <span className="raid-role-label">
+    <span className="raid-role-icon tank-icon">🛡</span>
+    Tanks
+  </span>
+  <strong>{raidRoleCounts.Tank}</strong>
+</div>
+
+    <div className="raid-role-stat">
+  <span className="raid-role-label">
+    <span className="raid-role-icon">✚</span>
+    Heals
+  </span>
+  <strong>{raidRoleCounts.Healer}</strong>
+</div>
+
+<div className="raid-role-stat">
+  <span className="raid-role-label">
+    <span className="raid-role-icon">🏹</span>
+    Ranged DPS
+  </span>
+  <strong>{raidRoleCounts["Ranged DPS"]}</strong>
+</div>
+
+<div className="raid-role-stat">
+  <span className="raid-role-label">
+    <span className="raid-role-icon">⚔</span>
+    Melee DPS
+  </span>
+  <strong>{raidRoleCounts["Melee DPS"]}</strong>
+</div>
+  </div>
 </div>
           <section className="raid-panel">
             {GROUPS.map((groupNumber) => {
